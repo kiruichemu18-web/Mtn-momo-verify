@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>MTN MoMo Uganda - Training Demo</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f4f4f4;
+      color: #111;
+    }
+
+    .header {
+      background: #ffcc00;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    .logo {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: #111;
+      color: #ffcc00;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 16px;
+    }
+
+    .brand h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .brand span {
+      display: block;
+      margin-top: 3px;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .demo-banner {
+      background: #111;
+      color: #fff;
+      text-align: center;
+      padding: 9px;
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .container {
+      max-width: 430px;
+      margin: 35px auto;
+      padding: 0 18px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 25px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+    }
+
+    .momo-circle {
+      width: 70px;
+      height: 70px;
+      margin: 0 auto 18px;
+      border-radius: 50%;
+      background: #ffcc00;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 24px;
+      margin: 8px 0 12px;
+    }
+
+    p {
+      line-height: 1.5;
+      color: #555;
+      font-size: 15px;
+    }
+
+    .center {
+      text-align: center;
+    }
+
+    label {
+      display: block;
+      margin-top: 18px;
+      margin-bottom: 7px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      border: 1px solid #ccc;
+      border-radius: 9px;
+      font-size: 18px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #111;
+    }
+
+    button {
+      width: 100%;
+      border: none;
+      border-radius: 9px;
+      padding: 14px;
+      margin-top: 15px;
+      background: #111;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .yellow-button {
+      background: #ffcc00;
+      color: #111;
+    }
+
+    .demo-code {
+      background: #fff7cc;
+      border: 1px solid #ead36a;
+      padding: 13px;
+      border-radius: 9px;
+      margin: 18px 0;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .demo-code strong {
+      font-size: 20px;
+      letter-spacing: 3px;
+    }
+
+    .status-box {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 9px;
+      background: #f1f1f1;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .pending {
+      color: #8a6d00;
+    }
+
+    .approved {
+      color: #16803c;
+      background: #e8f7ed;
+    }
+
+    .rejected {
+      color: #b42318;
+      background: #fdecec;
+    }
+
+    .success-icon,
+    .error-icon {
+      width: 65px;
+      height: 65px;
+      margin: 5px auto 15px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: bold;
+    }
+
+    .success-icon {
+      background: #d9f5e2;
+      color: #16803c;
+    }
+
+    .error-icon {
+      background: #fde0e0;
+      color: #b42318;
+    }
+
+    .notice {
+      margin-top: 20px;
+      padding: 13px;
+      background: #f7f7f7;
+      border-left: 4px solid #ffcc00;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #555;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    footer {
+      text-align: center;
+      padding: 25px 15px;
+      color: #777;
+      font-size: 11px;
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        margin-top: 25px;
+      }
+
+      .card {
+        padding: 22px 18px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header class="header">
+
+    <div class="logo">
+      MTN
+    </div>
+
+    <div class="brand">
+      <h2>MoMo Uganda</h2>
+      <span>TRAINING DEMO</span>
+    </div>
+
+  </header>
+
+  <div class="demo-banner">
+    TRAINING / SIMULATION ONLY
+  </div>
+
+
+  <main class="container">
+
+    <div class="card">
+
+      <!-- ENTRY PAGE -->
+      <section id="entry">
+
+        <div class="momo-circle">
+          MoMo
+        </div>
+
+        <h1>Demo Verification</h1>
+
+        <p class="center">
+          This page is a training simulation demonstrating
+          how a verification request can be reviewed.
+        </p>
+
+        <div class="demo-code">
+          Demo code:<br>
+          <strong>123456</strong>
+        </div>
+
+        <label for="demoCode">
+          Enter demonstration code
+        </label>
+
+        <input
+          id="demoCode"
+          type="text"
+          inputmode="numeric"
+          maxlength="6"
+          placeholder="Enter 123456"
+          autocomplete="off"
+        >
+
+        <button onclick="submitDemo()">
+          Continue
+        </button>
+
+        <div id="error" class="status-box rejected hidden"></div>
+
+      </section>
+
+
+      <!-- WAITING PAGE -->
+      <section id="waiting" class="hidden">
+
+        <div class="momo-circle">
+          MoMo
+        </div>
+
+        <h1>Request Submitted</h1>
+
+        <p class="center">
+          Your training verification request has been
+          sent for review.
+        </p>
+
+        <div class="status-box">
+          Request ID
+          <br>
+          <strong id="request"></strong>
+        </div>
+
+        <div id="status" class="status-box pending">
+          Status: Pending review
+        </div>
+
+        <p class="center">
+          Waiting for the training reviewer...
+        </p>
+
+      </section>
+
+
+      <!-- APPROVED PAGE -->
+      <section id="approved" class="hidden">
+
+        <div class="success-icon">
+          ✓
+        </div>
+
+        <h1>Approved</h1>
+
+        <p class="center">
+          The training reviewer approved this request.
+        </p>
+
+        <div class="status-box approved">
+          Training verification successful.
+        </div>
+
+        <button
+          class="yellow-button"
+          onclick="location.reload()">
+          Start Again
+        </button>
+
+      </section>
+
+
+      <!-- REJECTED PAGE -->
+      <section id="rejected" class="hidden">
+
+        <div class="error-icon">
+          ✕
+        </div>
+
+        <h1>Request Rejected</h1>
+
+        <p class="center">
+          The training reviewer rejected this request.
+        </p>
+
+        <div class="status-box rejected">
+          Please re-enter the demonstration code.
+        </div>
+
+        <button onclick="retry()">
+          Re-enter
+        </button>
+
+      </section>
+
+
+      <div class="notice">
+        <strong>Training notice:</strong>
+        This is a simulation. Never enter a real OTP, PIN,
+        password, or mobile-money authentication credential
+        on this demonstration page.
+      </div>
+
+    </div>
+
+  </main>
+
+
+  <footer>
+    MTN MoMo Training Demo<br>
+    For demonstration and testing purposes only.
+  </footer>
+
+
+  <script>
+
+    let requestId = null;
+    let timer = null;
+
+
+    async function submitDemo() {
+
+      const code =
+        document.getElementById("demoCode").value.trim();
+
+      const error =
+        document.getElementById("error");
+
+
+      if (code !== "123456") {
+
+        error.textContent =
+          "Incorrect demo code. Please enter 123456.";
+
+        error.classList.remove("hidden");
+
+        return;
+      }
+
+
+      error.classList.add("hidden");
+
+
+      try {
+
+        const response = await fetch(
+          "/api/demo-request",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: "{}"
+          }
+        );
+
+
+        if (!response.ok) {
+          throw new Error("Request failed");
+        }
+
+
+        const data = await response.json();
+
+        requestId = data.id;
+
+
+        document
+          .getElementById("entry")
+          .classList.add("hidden");
+
+
+        document
+          .getElementById("waiting")
+          .classList.remove("hidden");
+
+
+        document
+          .getElementById("request")
+          .textContent = requestId;
+
+
+        timer = setInterval(
+          checkStatus,
+          1500
+        );
+
+      } catch (error) {
+
+        document
+          .getElementById("error")
+          .textContent =
+            "Unable to submit the training request. Please try again.";
+
+        document
+          .getElementById("error")
+          .classList.remove("hidden");
+      }
+    }
+
+
+    async function checkStatus() {
+
+      if (!requestId) {
+        return;
+      }
+
+
+      try {
+
+        const response = await fetch(
+          "/api/demo-request/" + requestId
+        );
+
+
+        if (!response.ok) {
+          return;
+        }
+
+
+        const data = await response.json();
+
+        const status =
+          document.getElementById("status");
+
+
+        if (data.status === "pending") {
+
+          status.textContent =
+            "Status: Pending review";
+
+          status.className =
+            "status-box pending";
+        }
+
+
+        if (data.status === "approved") {
+
+          clearInterval(timer);
+
+
+          status.textContent =
+            "Status: Approved";
+
+          status.className =
+            "status-box approved";
+
+
+          document
+            .getElementById("waiting")
+            .classList.add("hidden");
+
+
+          document
+            .getElementById("approved")
+            .classList.remove("hidden");
+        }
+
+
+        if (data.status === "rejected") {
+
+          clearInterval(timer);
+
+
+          status.textContent =
+            "Status: Rejected";
+
+          status.className =
+            "status-box rejected";
+
+
+          document
+            .getElementById("waiting")
+            .classList.add("hidden");
+
+
+          document
+            .getElementById("rejected")
+            .classList.remove("hidden");
+        }
+
+      } catch (error) {
+
+        console.log(
+          "Status check failed:",
+          error
+        );
+      }
+    }
+
+
+    function retry() {
+
+      document
+        .getElementById("rejected")
+        .classList.add("hidden");
+
+
+      document
+        .getElementById("entry")
+        .classList.remove("hidden");
+
+
+      document
+        .getElementById("demoCode")
+        .value = "";
+
+
+      document
+        .getElementById("demoCode")
+        .focus();
+
+
+      document
+        .getElementById("error")
+        .classList.add("hidden");
+    }
+
+  </script>
+
+</body>
+</html>
