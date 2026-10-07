@@ -1,159 +1,171 @@
 const express = require("express");
-const https = require("https");
+const path = require("path");
+const TelegramBot = require("node-telegram-bot-api");
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Telegram configuration
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+
+const bot =
+  TELEGRAM_BOT_TOKEN
+    ? new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true })
+    : null;
 
 app.use(express.json());
-app.use(express.static("."));
+app.use(express.urlencoded({ extended: true }));
 
-const PORT = process.env.PORT || 10000;
-
-/*
-  Send a message to Telegram.
-  No OTP, PIN, password, or authentication code
-  is sent by this application.
-*/
-function sendTelegramMessage(token, chatId, message) {
-  return new Promise((resolve, reject) => {
-    const data = JSON.stringify({
-      chat_id: chatId,
-      text: message
-    });
-
-    const request = https.request(
-      {
-        hostname: "api.telegram.org",
-        path: `/bot${token}/sendMessage`,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(data)
-        }
-      },
-      (response) => {
-        let body = "";
-
-        response.on("data", (chunk) => {
-          body += chunk;
-        });
-
-        response.on("end", () => {
-          try {
-            const result = JSON.parse(body);
-
-            if (!response.ok || !result.ok) {
-              console.error("Telegram API error:", result);
-              reject(new Error("Telegram API request failed"));
-              return;
-            }
-
-            resolve(result);
-          } catch (error) {
-            console.error("Telegram response error:", error);
-            reject(new Error("Invalid Telegram response"));
-          }
-        });
-      }
-    );
-
-    request.on("error", (error) => {
-      reject(error);
-    });
-
-    request.write(data);
-    request.end();
-  });
-}
-
+// Store demo requests in memory
+const requests = new Map();
 
 /*
-  CHECK TELEGRAM CONFIGURATION
-
-  This does NOT reveal the token or chat ID.
+  Serve the frontend
 */
-app.get("/telegram-status", (req, res) => {
-  res.json({
-    botTokenConfigured: Boolean(
-      process.env.TELEGRAM_BOT_TOKEN
-    ),
+app.use(express.static(path.join(__dirname, "public")));
 
-    chatIdConfigured: Boolean(
-      process.env.TELEGRAM_CHAT_ID
-    )
-  });
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-
 /*
-  DEMO NOTIFICATION
-
-  Only a non-sensitive demo status is sent.
-*/
-app.post("/demo-notification", async (req, res) => {
-  try {
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.TELEGRAM_CHAT_ID;
-
-    if (!token || !chatId) {
-      console.error(
-        "Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID"
-      );
-
-      return res.status(500).json({
-        success: false,
-        error: "Telegram configuration is missing"
-      });
-    }
-
-    const message =
-      "🔔 DEMO VERIFICATION SUBMITTED\n\n" +
-      "Status: Awaiting demo review\n\n" +
-      "This is a training simulation.\n" +
-      "No OTP or PIN was transmitted.";
-
-    await sendTelegramMessage(
-      token,
-      chatId,
-      message
-    );
-
-    console.log(
-      "Demo notification sent successfully."
-    );
-
-    res.json({
-      success: true
-    });
-
-  } catch (error) {
-    console.error(
-      "Telegram notification error:",
-      error.message
-    );
-
-    res.status(500).json({
-      success: false,
-      error: "Unable to send demo notification"
-    });
-  }
-});
-
-
-/*
-  HEALTH CHECK
+  Health check
 */
 app.get("/health", (req, res) => {
   res.json({
-    status: "ok"
+    status: "ok",
+    demo: true
   });
 });
 
+/*
+  Create a demo request.
+  IMPORTANT: Do not send real OTPs/PINs here.
+*/
+app.post("/api/demo-request", async (req, res) => {
+  const requestId =
+    Date.now().toString(36) +
+    Math.random().toString(36).substring(2, 8);
+
+  const demoRequest = {
+    id: requestId,
+    status: "pending",
+    createdAt: new Date().toISOString()
+  };
+
+  requests.set(requestId, demoRequest);
+
+  if (bot && TELEGRAM_CHAT_ID) {
+    try {
+      await bot.sendMessage(
+        TELEGRAM_CHAT_ID,
+        `🧪 Demo verification request\n\nRequest ID: ${requestId}`,
+        {
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "✅ Approve Demo",
+                  callback_data: `approve:${requestId}`
+                },
+                {
+                  text: "❌ Reject Demo",
+                  callback_data: `reject:${requestId}`
+                }
+              ]
+            ]
+          }
+        }
+      );
+    } catch (error) {
+      console.error("Telegram error:", error.message);
+    }
+  }
+
+  res.json({
+    success: true,
+    requestId,
+    status: "pending"
+  });
+});
 
 /*
-  START SERVER
+  Check the status of a demo request
 */
+app.get("/api/demo-request/:id", (req, res) => {
+  const request = requests.get(req.params.id);
+
+  if (!request) {
+    return res.status(404).json({
+      success: false,
+      error: "Demo request not found"
+    });
+  }
+
+  res.json({
+    success: true,
+    requestId: request.id,
+    status: request.status
+  });
+});
+
+/*
+  Telegram approve/reject buttons
+*/
+if (bot) {
+  bot.on("callback_query", async (query) => {
+    const data = query.data || "";
+
+    const [action, requestId] = data.split(":");
+
+    if (!requestId) {
+      return;
+    }
+
+    const request = requests.get(requestId);
+
+    if (!request) {
+      await bot.answerCallbackQuery(query.id, {
+        text: "Demo request expired."
+      });
+      return;
+    }
+
+    if (action === "approve") {
+      request.status = "approved";
+
+      await bot.answerCallbackQuery(query.id, {
+        text: "Demo approved."
+      });
+
+      await bot.editMessageText(
+        `🧪 Demo verification request\n\nRequest ID: ${requestId}\n\nStatus: ✅ APPROVED`,
+        {
+          chat_id: query.message.chat.id,
+          message_id: query.message.message_id
+        }
+      );
+    }
+
+    if (action === "reject") {
+      request.status = "rejected";
+
+      await bot.answerCallbackQuery(query.id, {
+        text: "Demo rejected."
+      });
+
+      await bot.editMessageText(
+        `🧪 Demo verification request\n\nRequest ID: ${requestId}\n\nStatus: ❌ REJECTED`,
+        {
+          chat_id: query.message.chat.id,
+          message_id: query.message.message_id
+        }
+      );
+    }
+  });
+}
+
 app.listen(PORT, () => {
-  console.log(
-    `Server running on port ${PORT}`
-  );
+  console.log(`Demo server running on port ${PORT}`);
 });
