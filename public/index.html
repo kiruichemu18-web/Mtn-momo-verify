@@ -266,7 +266,6 @@
 
   <main class="page" id="page1">
 
-    <!-- PAGE 1 ENTRY -->
     <section class="card" id="page1Entry">
 
       <div class="page-label">
@@ -312,7 +311,6 @@
     </section>
 
 
-    <!-- PAGE 1 REJECTED -->
     <section class="card hidden" id="page1Rejected">
 
       <div class="page-label">
@@ -336,7 +334,6 @@
     </section>
 
 
-    <!-- PAGE 1 APPROVED -->
     <section class="card hidden" id="page1Approved">
 
       <div class="approved-icon">
@@ -378,7 +375,6 @@
 
   <main class="page hidden" id="page2">
 
-    <!-- PAGE 2 ENTRY -->
     <section class="card" id="page2Entry">
 
       <div class="page-label">
@@ -425,7 +421,6 @@
     </section>
 
 
-    <!-- PAGE 2 REJECTED -->
     <section class="card hidden" id="page2Rejected">
 
       <div class="page-label">
@@ -450,7 +445,6 @@
     </section>
 
 
-    <!-- FINAL APPROVED -->
     <section class="card hidden" id="finalApproved">
 
       <div class="approved-icon">
@@ -495,10 +489,8 @@
 
 
 <script>
+window.addEventListener("DOMContentLoaded", function () {
 
-  /*
-   * Keep request IDs separately for Page 1 and Page 2.
-   */
   let page1RequestId = null;
   let page2RequestId = null;
 
@@ -506,98 +498,99 @@
   let page2Timer = null;
 
 
-  /*
-   * PAGE 1
-   */
+  /* =========================
+     PAGE 1
+  ========================== */
 
-  document
-    .getElementById("page1Form")
-    .addEventListener("submit", async function(event) {
+  const page1Form = document.getElementById("page1Form");
+  const page1Input = document.getElementById("page1Code");
+  const page1Button = document.getElementById("page1Button");
+  const page1Status = document.getElementById("page1Status");
 
-      event.preventDefault();
+  page1Form.addEventListener("submit", async function (event) {
 
-      const code =
-        document.getElementById("page1Code").value.trim();
+    event.preventDefault();
 
-      /*
-       * Demo-only local validation.
-       *
-       * The code is NOT sent to the server or Telegram.
-       */
-      if (!/^\d{6}$/.test(code)) {
+    const code = page1Input.value.trim();
 
-        showStatus(
-          "page1Status",
-          "Enter all 6 digits of the demo code.",
-          "error"
+    if (!/^\d{6}$/.test(code)) {
+
+      page1Status.textContent =
+        "Enter all 6 digits of the demo code.";
+
+      page1Status.className = "status error";
+      page1Status.style.display = "block";
+
+      return;
+    }
+
+    page1Button.disabled = true;
+    page1Button.textContent = "Waiting for Review...";
+
+    page1Status.textContent =
+      "⏳ Waiting for the training reviewer...";
+
+    page1Status.className = "status pending";
+    page1Status.style.display = "block";
+
+    try {
+
+      const response = await fetch("/api/demo-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+
+        /*
+         * The actual code is deliberately NOT transmitted.
+         */
+        body: JSON.stringify({
+          page: "Page 1"
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          "Server returned " + response.status
         );
-
-        return;
       }
 
-      const button =
-        document.getElementById("page1Button");
+      const data = await response.json();
 
-      button.disabled = true;
-      button.textContent = "Waiting for Review...";
+      if (!data.requestId) {
+        throw new Error(
+          "No request ID returned by server."
+        );
+      }
 
-      showStatus(
-        "page1Status",
-        "⏳ Waiting for the training reviewer...",
-        "pending"
+      page1RequestId = data.requestId;
+
+      startPage1Polling();
+
+    } catch (error) {
+
+      console.error(
+        "Page 1 request error:",
+        error
       );
 
-      try {
+      page1Button.disabled = false;
+      page1Button.textContent = "Verify Demo";
 
-        const response = await fetch("/api/demo-request", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+      page1Status.textContent =
+        "Unable to contact the demo server. Please try again.";
 
-          /*
-           * Deliberately do NOT send the entered code.
-           */
-          body: JSON.stringify({
-            page: "Page 1"
-          })
-        });
+      page1Status.className = "status error";
+      page1Status.style.display = "block";
+    }
+  });
 
-        if (!response.ok) {
-          throw new Error("Request failed");
-        }
-
-        const data = await response.json();
-
-        page1RequestId = data.requestId;
-
-        startPage1Polling();
-
-      } catch (error) {
-
-        console.error(error);
-
-        button.disabled = false;
-        button.textContent = "Verify Demo";
-
-        showStatus(
-          "page1Status",
-          "Could not create the demo request. Please try again.",
-          "error"
-        );
-      }
-    });
-
-
-  /*
-   * PAGE 1 POLLING
-   */
 
   function startPage1Polling() {
 
     clearInterval(page1Timer);
 
-    page1Timer = setInterval(async function() {
+    page1Timer = setInterval(async function () {
 
       if (!page1RequestId) {
         return;
@@ -606,7 +599,8 @@
       try {
 
         const response = await fetch(
-          "/api/demo-request/" + encodeURIComponent(page1RequestId)
+          "/api/demo-request/" +
+          encodeURIComponent(page1RequestId)
         );
 
         if (!response.ok) {
@@ -614,6 +608,11 @@
         }
 
         const data = await response.json();
+
+        console.log(
+          "Page 1 status:",
+          data.status
+        );
 
         if (data.status === "approved") {
 
@@ -666,11 +665,180 @@
   }
 
 
-  /*
-   * OPEN PAGE 2
-   */
+  /* =========================
+     PAGE 2
+  ========================== */
 
-  function openPage2() {
+  const page2Form = document.getElementById("page2Form");
+  const page2Input = document.getElementById("page2Code");
+  const page2Button = document.getElementById("page2Button");
+  const page2Status = document.getElementById("page2Status");
+
+  page2Form.addEventListener("submit", async function (event) {
+
+    event.preventDefault();
+
+    const code = page2Input.value.trim();
+
+    if (!/^\d{6}$/.test(code)) {
+
+      page2Status.textContent =
+        "Enter all 6 digits of the demo code.";
+
+      page2Status.className = "status error";
+      page2Status.style.display = "block";
+
+      return;
+    }
+
+    page2Button.disabled = true;
+    page2Button.textContent = "Waiting for Review...";
+
+    page2Status.textContent =
+      "⏳ Waiting for the training reviewer...";
+
+    page2Status.className = "status pending";
+    page2Status.style.display = "block";
+
+    try {
+
+      const response = await fetch("/api/demo-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+
+        /*
+         * The actual code is deliberately NOT transmitted.
+         */
+        body: JSON.stringify({
+          page: "Page 2"
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          "Server returned " + response.status
+        );
+      }
+
+      const data = await response.json();
+
+      if (!data.requestId) {
+        throw new Error(
+          "No request ID returned by server."
+        );
+      }
+
+      page2RequestId = data.requestId;
+
+      startPage2Polling();
+
+    } catch (error) {
+
+      console.error(
+        "Page 2 request error:",
+        error
+      );
+
+      page2Button.disabled = false;
+      page2Button.textContent = "Verify Demo";
+
+      page2Status.textContent =
+        "Unable to contact the demo server. Please try again.";
+
+      page2Status.className = "status error";
+      page2Status.style.display = "block";
+    }
+  });
+
+
+  function startPage2Polling() {
+
+    clearInterval(page2Timer);
+
+    page2Timer = setInterval(async function () {
+
+      if (!page2RequestId) {
+        return;
+      }
+
+      try {
+
+        const response = await fetch(
+          "/api/demo-request/" +
+          encodeURIComponent(page2RequestId)
+        );
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = await response.json();
+
+        console.log(
+          "Page 2 status:",
+          data.status
+        );
+
+        if (data.status === "approved") {
+
+          clearInterval(page2Timer);
+
+          document
+            .getElementById("page2Entry")
+            .classList.add("hidden");
+
+          document
+            .getElementById("page2Rejected")
+            .classList.add("hidden");
+
+          document
+            .getElementById("finalApproved")
+            .classList.remove("hidden");
+
+          window.scrollTo(0, 0);
+
+          return;
+        }
+
+        if (data.status === "rejected") {
+
+          clearInterval(page2Timer);
+
+          document
+            .getElementById("page2Entry")
+            .classList.add("hidden");
+
+          document
+            .getElementById("finalApproved")
+            .classList.add("hidden");
+
+          document
+            .getElementById("page2Rejected")
+            .classList.remove("hidden");
+
+          return;
+        }
+
+      } catch (error) {
+
+        console.error(
+          "Page 2 polling error:",
+          error
+        );
+
+      }
+
+    }, 2000);
+  }
+
+
+  /* =========================
+     PAGE NAVIGATION
+  ========================== */
+
+  window.openPage2 = function () {
 
     clearInterval(page1Timer);
 
@@ -682,18 +850,11 @@
       .getElementById("page2")
       .classList.remove("hidden");
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth"
-    });
-  }
+    window.scrollTo(0, 0);
+  };
 
 
-  /*
-   * RESET PAGE 1
-   */
-
-  function resetPage1() {
+  window.resetPage1 = function () {
 
     clearInterval(page1Timer);
 
@@ -711,9 +872,57 @@
       .getElementById("page1Entry")
       .classList.remove("hidden");
 
-    document
-      .getElementById("page1Code")
-      .value = "";
+    page1Input.value = "";
 
-    const button =
-      document.get
+    page1Button.disabled = false;
+    page1Button.textContent = "Verify Demo";
+
+    page1Status.style.display = "none";
+  };
+
+
+  window.resetPage2 = function () {
+
+    clearInterval(page2Timer);
+
+    page2RequestId = null;
+
+    document
+      .getElementById("page2Rejected")
+      .classList.add("hidden");
+
+    document
+      .getElementById("finalApproved")
+      .classList.add("hidden");
+
+    document
+      .getElementById("page2Entry")
+      .classList.remove("hidden");
+
+    page2Input.value = "";
+
+    page2Button.disabled = false;
+    page2Button.textContent = "Verify Demo";
+
+    page2Status.style.display = "none";
+
+    window.scrollTo(0, 0);
+  };
+
+
+  window.startAgain = function () {
+
+    clearInterval(page1Timer);
+    clearInterval(page2Timer);
+
+    page1RequestId = null;
+    page2RequestId = null;
+
+    window.location.reload();
+  };
+
+});
+</script>
+
+</body>
+</html>
