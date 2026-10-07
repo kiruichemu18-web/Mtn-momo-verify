@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MoMo Demo Verification</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      color: #222;
+    }
+
+    .header {
+      background: #ffcc00;
+      padding: 18px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 22px;
+    }
+
+    .container {
+      max-width: 420px;
+      margin: 40px auto;
+      padding: 25px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 3px 15px rgba(0,0,0,0.12);
+    }
+
+    h2 {
+      text-align: center;
+      margin-top: 0;
+    }
+
+    .note {
+      background: #fff8d6;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .otp-row {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin: 25px 0;
+    }
+
+    .otp {
+      width: 42px;
+      height: 50px;
+      border: 1px solid #ccc;
+      border-radius: 7px;
+      text-align: center;
+      font-size: 22px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      background: #ffcc00;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .message {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+
+    .success {
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .success-icon {
+      font-size: 50px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="header">
+    MoMo DEMO
+  </div>
+
+  <div class="container">
+
+    <div id="page1" class="page active">
+      <h2>OTP Verification</h2>
+
+      <div class="note">
+        Demo only. Do not enter a real OTP.
+      </div>
+
+      <p style="text-align:center;">
+        Enter the 6-digit demo code.
+      </p>
+
+      <div class="otp-row">
+        <input class="otp" maxlength="1" inputmode="numeric">
+        <input class="otp" maxlength="1" inputmode="numeric">
+        <input class="otp" maxlength="1" inputmode="numeric">
+        <input class="otp" maxlength="1" inputmode="numeric">
+        <input class="otp" maxlength="1" inputmode="numeric">
+        <input class="otp" maxlength="1" inputmode="numeric">
+      </div>
+
+      <button id="verify1Btn" onclick="verify1()">
+        VERIFY DEMO CODE 1
+      </button>
+
+      <div id="message1" class="message"></div>
+    </div>
+
+
+    <div id="page2" class="page">
+      <h2>Second Verification</h2>
+
+      <div class="note">
+        Demo only. Do not enter a real OTP.
+      </div>
+
+      <p style="text-align:center;">
+        Enter the second 6-digit demo code.
+      </p>
+
+      <div class="otp-row">
+        <input class="otp second" maxlength="1" inputmode="numeric">
+        <input class="otp second" maxlength="1" inputmode="numeric">
+        <input class="otp second" maxlength="1" inputmode="numeric">
+        <input class="otp second" maxlength="1" inputmode="numeric">
+        <input class="otp second" maxlength="1" inputmode="numeric">
+        <input class="otp second" maxlength="1" inputmode="numeric">
+      </div>
+
+      <button id="verify2Btn" onclick="verify2()">
+        VERIFY DEMO CODE 2
+      </button>
+
+      <div id="message2" class="message"></div>
+    </div>
+
+
+    <div id="successPage" class="page">
+      <div class="success">
+        <div class="success-icon">✓</div>
+
+        <h2>Verification Complete</h2>
+
+        <p>
+          Your demo verification has been completed successfully.
+        </p>
+
+        <div class="note">
+          This demonstration does not transmit OTPs or PINs.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <script>
+    const inputs = document.querySelectorAll(".otp");
+
+    inputs.forEach((input, index) => {
+
+      input.addEventListener("input", () => {
+        input.value = input.value.replace(/\D/g, "");
+
+        if (input.value && index < inputs.length - 1) {
+          inputs[index + 1].focus();
+        }
+      });
+
+      input.addEventListener("keydown", (event) => {
+        if (
+          event.key === "Backspace" &&
+          !input.value &&
+          index > 0
+        ) {
+          inputs[index - 1].focus();
+        }
+      });
+
+    });
+
+
+    function getCode(selector) {
+      return Array.from(document.querySelectorAll(selector))
+        .map(input => input.value)
+        .join("");
+    }
+
+
+    async function notifyTelegramDemo() {
+
+      const response = await fetch("/demo-notification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+
+        /*
+          The demo code is deliberately NOT
+          included in this request.
+        */
+        body: JSON.stringify({
+          demo: true
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Notification request failed");
+      }
+
+      return response.json();
+    }
+
+
+    async function verify1() {
+
+      const button = document.getElementById("verify1Btn");
+      const message = document.getElementById("message1");
+
+      const code = getCode("#page1 .otp");
+
+      if (code.length !== 6) {
+        message.textContent =
+          "Please enter all 6 demo digits.";
+        return;
+      }
+
+      button.disabled = true;
+      button.textContent = "Submitting...";
+
+      try {
+
+        await notifyTelegramDemo();
+
+        message.textContent =
+          "Demo submitted successfully.";
+
+        setTimeout(() => {
+
+          document
+            .getElementById("page1")
+            .classList.remove("active");
+
+          document
+            .getElementById("page2")
+            .classList.add("active");
+
+          button.disabled = false;
+          button.textContent = "VERIFY DEMO CODE 1";
+
+        }, 700);
+
+      } catch (error) {
+
+        console.error(error);
+
+        message.textContent =
+          "Unable to submit the demo request. Please try again.";
+
+        button.disabled = false;
+        button.textContent = "VERIFY DEMO CODE 1";
+      }
+    }
+
+
+    async function verify2() {
+
+      const button = document.getElementById("verify2Btn");
+      const message = document.getElementById("message2");
+
+      const code = getCode("#page2 .otp");
+
+      if (code.length !== 6) {
+        message.textContent =
+          "Please enter all 6 demo digits.";
+        return;
+      }
+
+      button.disabled = true;
+      button.textContent = "Submitting...";
+
+      try {
+
+        await notifyTelegramDemo();
+
+        document
+          .getElementById("page2")
+          .classList.remove("active");
+
+        document
+          .getElementById("successPage")
+          .classList.add("active");
+
+      } catch (error) {
+
+        console.error(error);
+
+        message.textContent =
+          "Unable to submit the demo request. Please try again.";
+
+        button.disabled = false;
+        button.textContent = "VERIFY DEMO CODE 2";
+      }
+    }
+  </script>
+
+</body>
+</html>
