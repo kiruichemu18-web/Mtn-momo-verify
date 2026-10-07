@@ -1,10 +1,60 @@
 const express = require("express");
+const https = require("https");
 
 const app = express();
+
 app.use(express.json());
 app.use(express.static("."));
 
 const PORT = process.env.PORT || 10000;
+
+function sendTelegramMessage(token, chatId, message) {
+  return new Promise((resolve, reject) => {
+    const data = JSON.stringify({
+      chat_id: chatId,
+      text: message
+    });
+
+    const request = https.request(
+      {
+        hostname: "api.telegram.org",
+        path: `/bot${token}/sendMessage`,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(data)
+        }
+      },
+      (response) => {
+        let body = "";
+
+        response.on("data", chunk => {
+          body += chunk;
+        });
+
+        response.on("end", () => {
+          try {
+            const result = JSON.parse(body);
+
+            if (!response.ok || !result.ok) {
+              reject(new Error("Telegram API request failed"));
+              return;
+            }
+
+            resolve(result);
+          } catch {
+            reject(new Error("Invalid Telegram response"));
+          }
+        });
+      }
+    );
+
+    request.on("error", reject);
+
+    request.write(data);
+    request.end();
+  });
+}
 
 app.post("/demo-notification", async (req, res) => {
   try {
@@ -12,43 +62,32 @@ app.post("/demo-notification", async (req, res) => {
     const chatId = process.env.TELEGRAM_CHAT_ID;
 
     if (!token || !chatId) {
+      console.error("Missing Telegram environment variables");
+
       return res.status(500).json({
-        error: "Telegram environment variables are missing"
+        success: false,
+        error: "Telegram configuration is missing"
       });
     }
 
-    const message =
-      "🔔 Demo verification submitted\n\n" +
-      "Status: Awaiting demo review\n" +
-      "No OTP or PIN was transmitted.";
-
-    const response = await fetch(
-      `https://api.telegram.org/bot${token}/sendMessage`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: message
-        })
-      }
+    await sendTelegramMessage(
+      token,
+      chatId,
+      "🔔 DEMO VERIFICATION SUBMITTED\n\n" +
+      "Status: Awaiting demo review\n\n" +
+      "No OTP or PIN was transmitted."
     );
 
-    const result = await response.json();
+    res.json({
+      success: true
+    });
 
-    if (!response.ok || !result.ok) {
-      return res.status(500).json({
-        error: "Telegram request failed"
-      });
-    }
-
-    res.json({ success: true });
   } catch (error) {
-    console.error(error);
+    console.error("Telegram error:", error.message);
+
     res.status(500).json({
-      error: "Server error"
+      success: false,
+      error: "Unable to send demo notification"
     });
   }
 });
