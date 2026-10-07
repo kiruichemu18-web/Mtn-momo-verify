@@ -261,7 +261,6 @@
     TRAINING / SIMULATION ONLY
   </div>
 
-
   <main class="container">
 
     <div class="card">
@@ -306,7 +305,6 @@
 
       </section>
 
-
       <!-- WAITING PAGE -->
       <section id="waiting" class="hidden">
 
@@ -337,7 +335,6 @@
 
       </section>
 
-
       <!-- APPROVED PAGE -->
       <section id="approved" class="hidden">
 
@@ -363,7 +360,6 @@
 
       </section>
 
-
       <!-- REJECTED PAGE -->
       <section id="rejected" class="hidden">
 
@@ -387,7 +383,6 @@
 
       </section>
 
-
       <div class="notice">
         <strong>Training notice:</strong>
         This is a simulation. Never enter a real OTP, PIN,
@@ -399,18 +394,15 @@
 
   </main>
 
-
   <footer>
     MTN MoMo Training Demo<br>
     For demonstration and testing purposes only.
   </footer>
 
-
   <script>
 
     let requestId = null;
     let timer = null;
-
 
     async function submitDemo() {
 
@@ -419,7 +411,6 @@
 
       const error =
         document.getElementById("error");
-
 
       if (code !== "123456") {
 
@@ -431,9 +422,7 @@
         return;
       }
 
-
       error.classList.add("hidden");
-
 
       try {
 
@@ -448,31 +437,29 @@
           }
         );
 
-
         if (!response.ok) {
           throw new Error("Request failed");
         }
 
-
         const data = await response.json();
 
-        requestId = data.id;
-
+        /*
+          FIX:
+          server.js returns "requestId", not "id".
+        */
+        requestId = data.requestId;
 
         document
           .getElementById("entry")
           .classList.add("hidden");
 
-
         document
           .getElementById("waiting")
           .classList.remove("hidden");
 
-
         document
           .getElementById("request")
           .textContent = requestId;
-
 
         timer = setInterval(
           checkStatus,
@@ -492,13 +479,11 @@
       }
     }
 
-
     async function checkStatus() {
 
       if (!requestId) {
         return;
       }
-
 
       try {
 
@@ -506,17 +491,14 @@
           "/api/demo-request/" + requestId
         );
 
-
         if (!response.ok) {
           return;
         }
-
 
         const data = await response.json();
 
         const status =
           document.getElementById("status");
-
 
         if (data.status === "pending") {
 
@@ -527,11 +509,9 @@
             "status-box pending";
         }
 
-
         if (data.status === "approved") {
 
           clearInterval(timer);
-
 
           status.textContent =
             "Status: Approved";
@@ -539,22 +519,18 @@
           status.className =
             "status-box approved";
 
-
           document
             .getElementById("waiting")
             .classList.add("hidden");
-
 
           document
             .getElementById("approved")
             .classList.remove("hidden");
         }
 
-
         if (data.status === "rejected") {
 
           clearInterval(timer);
-
 
           status.textContent =
             "Status: Rejected";
@@ -562,11 +538,9 @@
           status.className =
             "status-box rejected";
 
-
           document
             .getElementById("waiting")
             .classList.add("hidden");
-
 
           document
             .getElementById("rejected")
@@ -582,28 +556,23 @@
       }
     }
 
-
     function retry() {
 
       document
         .getElementById("rejected")
         .classList.add("hidden");
 
-
       document
         .getElementById("entry")
         .classList.remove("hidden");
-
 
       document
         .getElementById("demoCode")
         .value = "";
 
-
       document
         .getElementById("demoCode")
         .focus();
-
 
       document
         .getElementById("error")
