@@ -1,12 +1,8 @@
 {
-  "name": "mtn-training-demo",
-  "version": "1.0.0",
-  "private": true,
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.21.2",
-    "node-telegram-bot-api": "^0.66.0"
+    "express": "^4.21.2"
   }
 }
