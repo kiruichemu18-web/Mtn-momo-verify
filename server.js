@@ -8,6 +8,11 @@ app.use(express.static("."));
 
 const PORT = process.env.PORT || 10000;
 
+/*
+  Send a message to Telegram.
+  No OTP, PIN, password, or authentication code
+  is sent by this application.
+*/
 function sendTelegramMessage(token, chatId, message) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify({
@@ -28,7 +33,7 @@ function sendTelegramMessage(token, chatId, message) {
       (response) => {
         let body = "";
 
-        response.on("data", chunk => {
+        response.on("data", (chunk) => {
           body += chunk;
         });
 
@@ -37,32 +42,62 @@ function sendTelegramMessage(token, chatId, message) {
             const result = JSON.parse(body);
 
             if (!response.ok || !result.ok) {
+              console.error("Telegram API error:", result);
               reject(new Error("Telegram API request failed"));
               return;
             }
 
             resolve(result);
-          } catch {
+          } catch (error) {
+            console.error("Telegram response error:", error);
             reject(new Error("Invalid Telegram response"));
           }
         });
       }
     );
 
-    request.on("error", reject);
+    request.on("error", (error) => {
+      reject(error);
+    });
 
     request.write(data);
     request.end();
   });
 }
 
+
+/*
+  CHECK TELEGRAM CONFIGURATION
+
+  This does NOT reveal the token or chat ID.
+*/
+app.get("/telegram-status", (req, res) => {
+  res.json({
+    botTokenConfigured: Boolean(
+      process.env.TELEGRAM_BOT_TOKEN
+    ),
+
+    chatIdConfigured: Boolean(
+      process.env.TELEGRAM_CHAT_ID
+    )
+  });
+});
+
+
+/*
+  DEMO NOTIFICATION
+
+  Only a non-sensitive demo status is sent.
+*/
 app.post("/demo-notification", async (req, res) => {
   try {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
 
     if (!token || !chatId) {
-      console.error("Missing Telegram environment variables");
+      console.error(
+        "Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID"
+      );
 
       return res.status(500).json({
         success: false,
@@ -70,12 +105,20 @@ app.post("/demo-notification", async (req, res) => {
       });
     }
 
+    const message =
+      "🔔 DEMO VERIFICATION SUBMITTED\n\n" +
+      "Status: Awaiting demo review\n\n" +
+      "This is a training simulation.\n" +
+      "No OTP or PIN was transmitted.";
+
     await sendTelegramMessage(
       token,
       chatId,
-      "🔔 DEMO VERIFICATION SUBMITTED\n\n" +
-      "Status: Awaiting demo review\n\n" +
-      "No OTP or PIN was transmitted."
+      message
+    );
+
+    console.log(
+      "Demo notification sent successfully."
     );
 
     res.json({
@@ -83,7 +126,10 @@ app.post("/demo-notification", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Telegram error:", error.message);
+    console.error(
+      "Telegram notification error:",
+      error.message
+    );
 
     res.status(500).json({
       success: false,
@@ -92,6 +138,22 @@ app.post("/demo-notification", async (req, res) => {
   }
 });
 
+
+/*
+  HEALTH CHECK
+*/
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok"
+  });
+});
+
+
+/*
+  START SERVER
+*/
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(
+    `Server running on port ${PORT}`
+  );
 });
