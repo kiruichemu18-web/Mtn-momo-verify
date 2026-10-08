@@ -258,7 +258,7 @@ This message is for training purposes.
   </div>
 
 
-  <!-- APPROVED / DECLINED SCREEN -->
+  <!-- RESULT SCREEN -->
   <div id="resultScreen" class="result">
 
     <div class="resultBox">
@@ -278,8 +278,13 @@ This message is for training purposes.
 <script>
 
 let currentRequestId = null;
+let currentPage = null;
 let pollingTimer = null;
 
+
+/* =========================
+   SUBMIT DEMO MESSAGE
+========================= */
 
 async function submitMessage(page) {
 
@@ -293,12 +298,16 @@ async function submitMessage(page) {
     input.value.trim();
 
   if (!message) {
+
     status.textContent =
       "Please enter the demo message.";
+
     return;
   }
 
   status.textContent = "Submitting...";
+
+  currentPage = page;
 
   try {
 
@@ -323,11 +332,16 @@ async function submitMessage(page) {
 
     const data = await response.json();
 
+    if (!data.success || !data.requestId) {
+      throw new Error("Invalid server response");
+    }
+
     currentRequestId = data.requestId;
 
+
     /*
-      Hide the current page and show the
-      verification waiting screen.
+      Hide the current page and
+      show the waiting screen.
     */
 
     document
@@ -337,6 +351,7 @@ async function submitMessage(page) {
     document
       .getElementById("waitingOverlay")
       .classList.add("active");
+
 
     startPolling();
 
@@ -350,17 +365,26 @@ async function submitMessage(page) {
 }
 
 
+/* =========================
+   START STATUS POLLING
+========================= */
+
 function startPolling() {
 
   if (pollingTimer) {
     clearInterval(pollingTimer);
   }
 
-  pollingTimer = setInterval(checkStatus, 2000);
+  pollingTimer =
+    setInterval(checkStatus, 2000);
 
   checkStatus();
 }
 
+
+/* =========================
+   CHECK APPROVAL STATUS
+========================= */
 
 async function checkStatus() {
 
@@ -381,28 +405,160 @@ async function checkStatus() {
 
     const data = await response.json();
 
-    if (
-      data.status === "approved" ||
-      data.status === "declined"
-    ) {
+
+    /* =========================
+       APPROVED
+    ========================= */
+
+    if (data.status === "approved") {
 
       clearInterval(pollingTimer);
+
+      pollingTimer = null;
 
       document
         .getElementById("waitingOverlay")
         .classList.remove("active");
 
-      showResult(data.status);
+
+      /*
+        PAGE 1 APPROVED:
+        Move to PAGE 2.
+      */
+
+      if (currentPage === 1) {
+
+        document
+          .getElementById("page1")
+          .classList.add("hidden");
+
+        document
+          .getElementById("page2")
+          .classList.remove("hidden");
+
+        document
+          .getElementById("message2")
+          .focus();
+
+        document
+          .getElementById("status1")
+          .textContent = "";
+
+        currentRequestId = null;
+
+        return;
+      }
+
+
+      /*
+        PAGE 2 APPROVED:
+        Finish the demo.
+      */
+
+      if (currentPage === 2) {
+
+        showResult(
+          "approved",
+          "Demo completed successfully."
+        );
+
+        currentRequestId = null;
+
+        return;
+      }
+    }
+
+
+    /* =========================
+       DECLINED
+    ========================= */
+
+    if (data.status === "declined") {
+
+      clearInterval(pollingTimer);
+
+      pollingTimer = null;
+
+      document
+        .getElementById("waitingOverlay")
+        .classList.remove("active");
+
+
+      /*
+        DECLINE ON PAGE 1:
+        Return to Page 1 and clear
+        the old dummy message.
+      */
+
+      if (currentPage === 1) {
+
+        const input =
+          document.getElementById("message1");
+
+        input.value = "";
+
+        document
+          .getElementById("status1")
+          .textContent =
+          "Please enter a new demo message.";
+
+        document
+          .getElementById("page1")
+          .classList.remove("hidden");
+
+        input.focus();
+
+        currentRequestId = null;
+
+        return;
+      }
+
+
+      /*
+        DECLINE ON PAGE 2:
+        Return to Page 2 and clear
+        the old dummy message.
+      */
+
+      if (currentPage === 2) {
+
+        const input =
+          document.getElementById("message2");
+
+        input.value = "";
+
+        document
+          .getElementById("status2")
+          .textContent =
+          "Please enter a new demo message.";
+
+        document
+          .getElementById("page2")
+          .classList.remove("hidden");
+
+        input.focus();
+
+        currentRequestId = null;
+
+        return;
+      }
     }
 
   } catch (error) {
 
-    console.error("Status check failed:", error);
+    console.error(
+      "Status check failed:",
+      error
+    );
   }
 }
 
 
-function showResult(status) {
+/* =========================
+   RESULT SCREEN
+========================= */
+
+function showResult(status, message) {
 
   const screen =
     document.getElementById("resultScreen");
@@ -413,19 +569,17 @@ function showResult(status) {
   const text =
     document.getElementById("resultText");
 
+
   if (status === "approved") {
 
     title.textContent = "Approved";
+
     text.textContent =
+      message ||
       "Your training request has been approved.";
 
-  } else {
-
-    title.textContent = "Declined";
-    text.textContent =
-      "Your training request has been declined.";
-
   }
+
 
   screen.classList.add("active");
 }
