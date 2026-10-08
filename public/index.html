@@ -89,8 +89,6 @@
       font-weight: bold;
     }
 
-    /* WAITING OVERLAY */
-
     #waitingOverlay {
       position: fixed;
       inset: 0;
@@ -139,8 +137,6 @@
       line-height: 1.5;
     }
 
-    /* RESULT SCREEN */
-
     .result {
       position: fixed;
       inset: 0;
@@ -187,12 +183,11 @@
       passwords, or authentication information.
     </div>
 
-
     <!-- PAGE 1 -->
 
     <div class="card" id="page1">
 
-      <p>Copy the message from SMS in your messages box.</p>
+      <p>Copy the dummy message from the demonstration box.</p>
 
       <div class="sms">
 This is a demonstration message.
@@ -218,7 +213,7 @@ This message is for training purposes.
 
     <div class="card hidden" id="page2">
 
-      <p>Copy the message from SMS in your messages box.</p>
+      <p>Copy the dummy message from the demonstration box.</p>
 
       <div class="sms">
 This is the second demonstration message.
@@ -251,11 +246,11 @@ This message is for training purposes.
       <div class="spinner"></div>
 
       <div class="waitingTitle">
-        Secure Verification
+        Demo Verification
       </div>
 
       <div class="waitingText">
-        Verifying your request...<br>
+        Waiting for demo approval...<br>
         Please do not close this page.
       </div>
 
@@ -344,12 +339,6 @@ async function submitMessage(page) {
     }
 
     currentRequestId = data.requestId;
-
-
-    /*
-      Hide the current page
-      and show waiting screen.
-    */
 
     document
       .getElementById("page" + page)
@@ -453,6 +442,7 @@ async function checkStatus() {
           .textContent = "";
 
         currentRequestId = null;
+        currentPage = 2;
 
         return;
       }
@@ -466,66 +456,4 @@ async function checkStatus() {
       if (data.page === 2) {
 
         showResult(
-          "approved",
-          "Demo completed successfully."
-        );
-
-        currentRequestId = null;
-
-        return;
-      }
-    }
-
-
-    /* =========================
-       DECLINED
-    ========================= */
-
-    if (data.status === "declined") {
-
-      clearInterval(pollingTimer);
-
-      pollingTimer = null;
-
-      document
-        .getElementById("waitingOverlay")
-        .classList.remove("active");
-
-
-      /*
-        PAGE 1 DECLINED:
-        RETURN TO PAGE 1.
-      */
-
-      if (data.page === 1) {
-
-        const input =
-          document.getElementById("message1");
-
-        input.value = "";
-
-        document
-          .getElementById("status1")
-          .textContent =
-          "Please enter a new demo message.";
-
-        document
-          .getElementById("page1")
-          .classList.remove("hidden");
-
-        input.focus();
-
-        currentRequestId = null;
-
-        return;
-      }
-
-
-      /*
-        PAGE 2 DECLINED:
-        RETURN TO PAGE 2.
-      */
-
-      if (data.page === 2) {
-
-        const
+          "
