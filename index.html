@@ -89,7 +89,6 @@
       font-weight: bold;
     }
 
-    /* WAITING OVERLAY */
     #waitingOverlay {
       position: fixed;
       inset: 0;
@@ -138,7 +137,6 @@
       line-height: 1.5;
     }
 
-    /* RESULT */
     .result {
       position: fixed;
       inset: 0;
@@ -185,14 +183,11 @@
       passwords, or authentication information.
     </div>
 
-
-    <!-- ========================= -->
     <!-- PAGE 1 -->
-    <!-- ========================= -->
 
     <div class="card" id="page1">
 
-      <p>Copy the message from SMS in your messages box.</p>
+      <p>Copy the dummy message shown below.</p>
 
       <div class="sms">
 This is a demonstration message.
@@ -213,14 +208,11 @@ This message is for training purposes.
 
     </div>
 
-
-    <!-- ========================= -->
     <!-- PAGE 2 -->
-    <!-- ========================= -->
 
     <div class="card hidden" id="page2">
 
-      <p>Copy the message from SMS in your messages box.</p>
+      <p>Copy the second dummy message shown below.</p>
 
       <div class="sms">
 This is the second demonstration message.
@@ -243,10 +235,7 @@ This message is for training purposes.
 
   </div>
 
-
-  <!-- ========================= -->
   <!-- WAITING SCREEN -->
-  <!-- ========================= -->
 
   <div id="waitingOverlay">
 
@@ -259,7 +248,7 @@ This message is for training purposes.
       </div>
 
       <div class="waitingText">
-        Verifying your training request...<br>
+        Processing your training request...<br>
         Please do not close this page.
       </div>
 
@@ -267,26 +256,19 @@ This message is for training purposes.
 
   </div>
 
-
-  <!-- ========================= -->
   <!-- FINAL RESULT -->
-  <!-- ========================= -->
 
   <div id="resultScreen" class="result">
 
     <div class="resultBox">
 
-      <div
-        id="resultTitle"
-        class="resultTitle"
-      ></div>
+      <div id="resultTitle" class="resultTitle"></div>
 
       <div id="resultText"></div>
 
     </div>
 
   </div>
-
 
 <script>
 
@@ -355,18 +337,10 @@ async function submitMessage(page) {
       data.requestId;
 
 
-    /*
-      Hide current page.
-    */
-
     document
       .getElementById("page" + page)
       .classList.add("hidden");
 
-
-    /*
-      Show waiting screen.
-    */
 
     document
       .getElementById("waitingOverlay")
@@ -417,7 +391,7 @@ function startPolling() {
 
 
 /* =========================
-   CHECK TELEGRAM STATUS
+   CHECK STATUS
 ========================= */
 
 async function checkStatus() {
@@ -425,7 +399,6 @@ async function checkStatus() {
   if (!currentRequestId) {
     return;
   }
-
 
   try {
 
@@ -473,11 +446,6 @@ async function checkStatus() {
         );
 
 
-      /*
-        PAGE 1 APPROVED:
-        Move to PAGE 2.
-      */
-
       if (currentPage === 1) {
 
         currentRequestId = null;
@@ -489,11 +457,6 @@ async function checkStatus() {
         return;
       }
 
-
-      /*
-        PAGE 2 APPROVED:
-        Show final approved screen.
-      */
 
       if (currentPage === 2) {
 
@@ -529,9 +492,48 @@ async function checkStatus() {
         );
 
 
-      showResult(
-        "declined"
-      );
+      /*
+        Clear the dummy message
+        on whichever page was
+        submitted.
+      */
+
+      const input =
+        document.getElementById(
+          "message" + currentPage
+        );
+
+      const status =
+        document.getElementById(
+          "status" + currentPage
+        );
+
+
+      if (input) {
+        input.value = "";
+      }
+
+
+      if (status) {
+
+        status.textContent =
+          "The dummy message was declined. Please re-enter the dummy message.";
+
+      }
+
+
+      /*
+        Return to the same page.
+      */
+
+      const page =
+        document.getElementById(
+          "page" + currentPage
+        );
+
+      if (page) {
+        page.classList.remove("hidden");
+      }
 
     }
 
@@ -577,16 +579,6 @@ function showResult(status) {
 
     text.textContent =
       "Your training request has been approved.";
-
-  }
-
-  else {
-
-    title.textContent =
-      "Declined";
-
-    text.textContent =
-      "Your training request has been declined.";
 
   }
 
