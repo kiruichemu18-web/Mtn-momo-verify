@@ -1,745 +1,141 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
+async function checkStatus() {
+  if (!currentRequestId) {
+    return;
+  }
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
+  try {
+    const response = await fetch(
+      "/demo-status/" + encodeURIComponent(currentRequestId),
+      { cache: "no-store" }
+    );
 
-  <title>Demo Verification</title>
-
-  <style>
-    * {
-      box-sizing: border-box;
+    if (!response.ok) {
+      return;
     }
 
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: #f4f5f7;
-      font-family: Arial, sans-serif;
-      color: #222;
-    }
+    const data = await response.json();
 
-    .header {
-      background: #ffcc00;
-      padding: 18px;
-      text-align: center;
-      font-weight: bold;
-      font-size: 20px;
-    }
+    console.log("Demo status:", data);
 
-    .container {
-      width: 100%;
-      max-width: 480px;
-      margin: 35px auto;
-      padding: 0 16px;
-    }
+    // =========================
+    // APPROVED
+    // =========================
+    if (data.status === "approved") {
 
-    .notice {
-      background: #fff8d6;
-      border: 1px solid #eadb80;
-      border-radius: 10px;
-      padding: 14px;
-      margin-bottom: 18px;
-      font-size: 13px;
-      line-height: 1.5;
-    }
+      clearInterval(pollingTimer);
+      pollingTimer = null;
 
-    .card {
-      background: white;
-      border-radius: 14px;
-      padding: 22px;
-      box-shadow: 0 3px 14px rgba(0,0,0,0.08);
-    }
+      document
+        .getElementById("waitingOverlay")
+        .classList.remove("active");
 
-    .card h2 {
-      margin-top: 0;
-      margin-bottom: 10px;
-    }
+      // Page 1 → Page 2
+      if (Number(data.page) === 1) {
 
-    .card p {
-      line-height: 1.5;
-      color: #555;
-    }
+        document
+          .getElementById("page1")
+          .classList.add("hidden");
 
-    textarea {
-      width: 100%;
-      min-height: 110px;
-      resize: vertical;
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      padding: 13px;
-      font-size: 15px;
-      font-family: Arial, sans-serif;
-      outline: none;
-    }
+        document
+          .getElementById("page2")
+          .classList.remove("hidden");
 
-    textarea:focus {
-      border-color: #777;
-    }
+        document
+          .getElementById("status1")
+          .textContent = "";
 
-    button {
-      width: 100%;
-      margin-top: 14px;
-      border: none;
-      border-radius: 10px;
-      padding: 14px;
-      background: #ffcc00;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-    }
+        document
+          .getElementById("message2")
+          .focus();
 
-    button:hover {
-      background: #f2bd00;
-    }
-
-    .status {
-      margin-top: 12px;
-      text-align: center;
-      font-size: 14px;
-      color: #555;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    #waitingOverlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(255,255,255,0.96);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      z-index: 1000;
-      padding: 20px;
-    }
-
-    #waitingOverlay.active {
-      display: flex;
-    }
-
-    .waitingBox {
-      width: 100%;
-      max-width: 400px;
-      background: white;
-      border-radius: 16px;
-      padding: 30px 20px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-    }
-
-    .loader {
-      width: 42px;
-      height: 42px;
-      border: 4px solid #ddd;
-      border-top-color: #222;
-      border-radius: 50%;
-      margin: 0 auto 20px;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    #resultScreen {
-      position: fixed;
-      inset: 0;
-      background: #f4f5f7;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      z-index: 1100;
-    }
-
-    #resultScreen.active {
-      display: flex;
-    }
-
-    .resultBox {
-      background: white;
-      width: 100%;
-      max-width: 400px;
-      border-radius: 16px;
-      padding: 30px 20px;
-      text-align: center;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    }
-
-    .resultIcon {
-      font-size: 50px;
-      margin-bottom: 15px;
-    }
-
-    .resultBox h2 {
-      margin-bottom: 10px;
-    }
-
-    .resultBox p {
-      color: #555;
-      line-height: 1.5;
-    }
-  </style>
-</head>
-
-<body>
-
-  <div class="header">
-    DEMO VERIFICATION
-  </div>
-
-  <div class="container">
-
-    <div class="notice">
-      <strong>Training simulation only.</strong><br>
-      Do not enter real OTPs, PINs, passwords,
-      or authentication information.
-      Use dummy training messages only.
-    </div>
-
-
-    <!-- PAGE 1 -->
-    <div
-      id="page1"
-      class="card"
-    >
-
-      <h2>Demo Step 1</h2>
-
-      <p>
-        Enter a dummy training message below
-        and submit it for demo review.
-      </p>
-
-      <textarea
-        id="message1"
-        placeholder="Enter a dummy demo message"
-      ></textarea>
-
-      <button
-        type="button"
-        onclick="submitMessage(1)"
-      >
-        Submit
-      </button>
-
-      <div
-        id="status1"
-        class="status"
-      ></div>
-
-    </div>
-
-
-    <!-- PAGE 2 -->
-    <div
-      id="page2"
-      class="card hidden"
-    >
-
-      <h2>Demo Step 2</h2>
-
-      <p>
-        Step 1 was approved.
-        Enter another dummy training message
-        for the second demo review.
-      </p>
-
-      <textarea
-        id="message2"
-        placeholder="Enter a dummy demo message"
-      ></textarea>
-
-      <button
-        type="button"
-        onclick="submitMessage(2)"
-      >
-        Submit
-      </button>
-
-      <div
-        id="status2"
-        class="status"
-      ></div>
-
-    </div>
-
-  </div>
-
-
-  <!-- WAITING SCREEN -->
-  <div id="waitingOverlay">
-
-    <div class="waitingBox">
-
-      <div class="loader"></div>
-
-      <h2>
-        Waiting for demo approval
-      </h2>
-
-      <p>
-        Your training request has been
-        submitted for review.
-      </p>
-
-      <p>
-        Please wait...
-      </p>
-
-    </div>
-
-  </div>
-
-
-  <!-- RESULT SCREEN -->
-  <div id="resultScreen">
-
-    <div class="resultBox">
-
-      <div class="resultIcon">
-        ✅
-      </div>
-
-      <h2 id="resultTitle">
-        Approved
-      </h2>
-
-      <p id="resultText">
-        Demo completed successfully.
-      </p>
-
-    </div>
-
-  </div>
-
-
-  <script>
-
-    let currentRequestId = null;
-    let currentPage = null;
-    let pollingTimer = null;
-
-
-    // ===============================
-    // SUBMIT MESSAGE
-    // ===============================
-    async function submitMessage(page) {
-
-      const input =
-        document.getElementById(
-          "message" + page
-        );
-
-      const status =
-        document.getElementById(
-          "status" + page
-        );
-
-      const message =
-        input.value.trim();
-
-
-      if (!message) {
-        status.textContent =
-          "Please enter the demo message.";
+        currentRequestId = null;
+        currentPage = 2;
 
         return;
       }
 
+      // Page 2 → Final approval
+      if (Number(data.page) === 2) {
 
-      status.textContent =
-        "Submitting...";
+        currentRequestId = null;
 
-      currentPage = page;
+        showResult(
+          "approved",
+          "Demo completed successfully."
+        );
 
-
-      try {
-
-        const response =
-          await fetch(
-            "/demo-message",
-            {
-              method: "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
-
-              body: JSON.stringify({
-                page: page,
-                message: message
-              })
-            }
-          );
-
-
-        if (!response.ok) {
-          throw new Error(
-            "Submission failed"
-          );
-        }
-
-
-        const data =
-          await response.json();
-
-
-        if (
-          !data.success ||
-          !data.requestId
-        ) {
-          throw new Error(
-            "Invalid server response"
-          );
-        }
-
-
-        currentRequestId =
-          data.requestId;
-
-
-        document
-          .getElementById(
-            "page" + page
-          )
-          .classList.add(
-            "hidden"
-          );
-
-
-        document
-          .getElementById(
-            "waitingOverlay"
-          )
-          .classList.add(
-            "active"
-          );
-
-
-        startPolling();
-
-      } catch (error) {
-
-        console.error(error);
-
-        status.textContent =
-          "Unable to submit the training request.";
+        return;
       }
     }
 
 
-    // ===============================
-    // START POLLING
-    // ===============================
-    function startPolling() {
+    // =========================
+    // DECLINED
+    // =========================
+    if (data.status === "declined") {
 
-      if (pollingTimer) {
-        clearInterval(
-          pollingTimer
-        );
-      }
+      clearInterval(pollingTimer);
+      pollingTimer = null;
 
+      document
+        .getElementById("waitingOverlay")
+        .classList.remove("active");
 
-      pollingTimer =
-        setInterval(
-          checkStatus,
-          2000
-        );
+      // Page 1 → Page 1 again
+      if (Number(data.page) === 1) {
 
+        const input =
+          document.getElementById("message1");
 
-      checkStatus();
-    }
+        input.value = "";
 
+        document
+          .getElementById("status1")
+          .textContent =
+          "Please enter a new demo message.";
 
-    // ===============================
-    // CHECK STATUS
-    // ===============================
-    async function checkStatus() {
+        document
+          .getElementById("page1")
+          .classList.remove("hidden");
 
-      if (!currentRequestId) {
+        input.focus();
+
+        currentRequestId = null;
+        currentPage = 1;
+
         return;
       }
 
+      // Page 2 → Page 2 again
+      if (Number(data.page) === 2) {
 
-      try {
+        const input =
+          document.getElementById("message2");
 
-        const response =
-          await fetch(
-            "/demo-status/" +
-            encodeURIComponent(
-              currentRequestId
-            )
-          );
+        input.value = "";
 
+        document
+          .getElementById("status2")
+          .textContent =
+          "Please enter a new demo message.";
 
-        if (!response.ok) {
-          return;
-        }
+        document
+          .getElementById("page2")
+          .classList.remove("hidden");
 
+        input.focus();
 
-        const data =
-          await response.json();
+        currentRequestId = null;
+        currentPage = 2;
 
-
-        console.log(
-          "Demo status:",
-          data
-        );
-
-
-        // ===============================
-        // APPROVED
-        // ===============================
-        if (
-          data.status === "approved"
-        ) {
-
-          clearInterval(
-            pollingTimer
-          );
-
-          pollingTimer = null;
-
-
-          document
-            .getElementById(
-              "waitingOverlay"
-            )
-            .classList.remove(
-              "active"
-            );
-
-
-          // PAGE 1 APPROVED
-          // MOVE TO PAGE 2
-          if (data.page === 1) {
-
-            document
-              .getElementById(
-                "page1"
-              )
-              .classList.add(
-                "hidden"
-              );
-
-
-            document
-              .getElementById(
-                "page2"
-              )
-              .classList.remove(
-                "hidden"
-              );
-
-
-            document
-              .getElementById(
-                "message2"
-              )
-              .focus();
-
-
-            document
-              .getElementById(
-                "status1"
-              )
-              .textContent = "";
-
-
-            currentRequestId =
-              null;
-
-            currentPage = 2;
-
-            return;
-          }
-
-
-          // PAGE 2 APPROVED
-          // FINISH DEMO
-          if (data.page === 2) {
-
-            showResult(
-              "approved",
-              "Demo completed successfully."
-            );
-
-
-            currentRequestId =
-              null;
-
-            return;
-          }
-        }
-
-
-        // ===============================
-        // DECLINED
-        // ===============================
-        if (
-          data.status === "declined"
-        ) {
-
-          clearInterval(
-            pollingTimer
-          );
-
-          pollingTimer = null;
-
-
-          document
-            .getElementById(
-              "waitingOverlay"
-            )
-            .classList.remove(
-              "active"
-            );
-
-
-          // PAGE 1 DECLINED
-          if (data.page === 1) {
-
-            const input =
-              document.getElementById(
-                "message1"
-              );
-
-
-            input.value = "";
-
-
-            document
-              .getElementById(
-                "status1"
-              )
-              .textContent =
-              "Please enter a new demo message.";
-
-
-            document
-              .getElementById(
-                "page1"
-              )
-              .classList.remove(
-                "hidden"
-              );
-
-
-            input.focus();
-
-
-            currentRequestId =
-              null;
-
-            currentPage = 1;
-
-            return;
-          }
-
-
-          // PAGE 2 DECLINED
-          if (data.page === 2) {
-
-            const input =
-              document.getElementById(
-                "message2"
-              );
-
-
-            input.value = "";
-
-
-            document
-              .getElementById(
-                "status2"
-              )
-              .textContent =
-              "Please enter a new demo message.";
-
-
-            document
-              .getElementById(
-                "page2"
-              )
-              .classList.remove(
-                "hidden"
-              );
-
-
-            input.focus();
-
-
-            currentRequestId =
-              null;
-
-            currentPage = 2;
-
-            return;
-          }
-        }
-
-      } catch (error) {
-
-        console.error(
-          "Status check failed:",
-          error
-        );
+        return;
       }
     }
 
-
-    // ===============================
-    // RESULT
-    // ===============================
-    function showResult(
-      status,
-      message
-    ) {
-
-      const screen =
-        document.getElementById(
-          "resultScreen"
-        );
-
-      const title =
-        document.getElementById(
-          "resultTitle"
-        );
-
-      const text =
-        document.getElementById(
-          "resultText"
-        );
-
-
-      if (status === "approved") {
-
-        title.textContent =
-          "Approved";
-
-
-        text.textContent =
-          message ||
-          "Demo completed successfully.";
-      }
-
-
-      screen.classList.add(
-        "active"
-      );
-    }
-
-  </script>
-
-</body>
-</html>
+  } catch (error) {
+    console.error(
+      "Status check failed:",
+      error
+    );
+  }
+}
