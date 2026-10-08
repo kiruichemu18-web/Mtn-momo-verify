@@ -15,10 +15,9 @@ const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
 
 
-/* =========================================
-   CREATE DEMO REQUEST
-========================================= */
-
+// ===============================
+// SUBMIT DEMO MESSAGE
+// ===============================
 app.post("/demo-message", async (req, res) => {
   const { page, message } = req.body;
 
@@ -54,10 +53,9 @@ app.post("/demo-message", async (req, res) => {
 });
 
 
-/* =========================================
-   USER CHECKS REQUEST STATUS
-========================================= */
-
+// ===============================
+// CHECK DEMO STATUS
+// ===============================
 app.get("/demo-status/:id", (req, res) => {
   const request = requests.get(req.params.id);
 
@@ -67,12 +65,6 @@ app.get("/demo-status/:id", (req, res) => {
     });
   }
 
-  /*
-    IMPORTANT:
-    Return both status AND page so the frontend
-    knows whether this is Page 1 or Page 2.
-  */
-
   res.json({
     status: request.status,
     page: request.page
@@ -80,10 +72,9 @@ app.get("/demo-status/:id", (req, res) => {
 });
 
 
-/* =========================================
-   TELEGRAM WEBHOOK
-========================================= */
-
+// ===============================
+// TELEGRAM WEBHOOK
+// ===============================
 app.post("/telegram-webhook", async (req, res) => {
   try {
     const update = req.body;
@@ -98,7 +89,6 @@ app.post("/telegram-webhook", async (req, res) => {
     }
 
     const callback = update.callback_query;
-
     const data = callback.data || "";
 
     if (!data.startsWith("demo:")) {
@@ -106,7 +96,6 @@ app.post("/telegram-webhook", async (req, res) => {
     }
 
     const parts = data.split(":");
-
     const action = parts[1];
     const requestId = parts[2];
 
@@ -122,15 +111,22 @@ app.post("/telegram-webhook", async (req, res) => {
     }
 
 
-    /* =========================================
-       APPROVE
-    ========================================= */
-
+    // ===============================
+    // APPROVE
+    // ===============================
     if (action === "approve") {
-
       request.status = "approved";
 
       requests.set(requestId, request);
+
+      console.log(
+        "DEMO APPROVED:",
+        request.id,
+        "PAGE:",
+        request.page,
+        "STATUS:",
+        request.status
+      );
 
       await answerCallback(
         callback.id,
@@ -154,15 +150,22 @@ app.post("/telegram-webhook", async (req, res) => {
     }
 
 
-    /* =========================================
-       DECLINE
-    ========================================= */
-
+    // ===============================
+    // DECLINE
+    // ===============================
     else if (action === "decline") {
-
       request.status = "declined";
 
       requests.set(requestId, request);
+
+      console.log(
+        "DEMO DECLINED:",
+        request.id,
+        "PAGE:",
+        request.page,
+        "STATUS:",
+        request.status
+      );
 
       await answerCallback(
         callback.id,
@@ -186,12 +189,10 @@ app.post("/telegram-webhook", async (req, res) => {
     }
 
 
-    /* =========================================
-       EXTEND
-    ========================================= */
-
+    // ===============================
+    // EXTEND TIME
+    // ===============================
     else if (action === "extend") {
-
       request.status = "pending";
 
       requests.set(requestId, request);
@@ -220,7 +221,6 @@ app.post("/telegram-webhook", async (req, res) => {
     return res.sendStatus(200);
 
   } catch (error) {
-
     console.error(
       "Webhook error:",
       error
@@ -231,12 +231,147 @@ app.post("/telegram-webhook", async (req, res) => {
 });
 
 
-/* =========================================
-   TELEGRAM MESSAGE
-========================================= */
+// ===============================
+// SEND TELEGRAM DEMO REQUEST
+// ===============================
+async function sendTelegramDemoRequest(request) {
+  if (!TELEGRAM_TOKEN || !TELEGRAM_CHAT_ID) {
+    console.log(
+      "Telegram is not configured."
+    );
+    return;
+  }
 
-function buildTelegramMessage(request, status) {
+  const url =
+    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
 
+  const message =
+    buildTelegramMessage(
+      request,
+      "WAITING FOR REVIEW"
+    );
+
+  const replyMarkup = {
+    inline_keyboard: [
+      [
+        {
+          text: "✅ Approve",
+          callback_data:
+            `demo:approve:${request.id}`
+        }
+      ],
+      [
+        {
+          text: "❌ Decline",
+          callback_data:
+            `demo:decline:${request.id}`
+        }
+      ],
+      [
+        {
+          text: "⏱ Extend Time",
+          callback_data:
+            `demo:extend:${request.id}`
+        }
+      ]
+    ]
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+
+    headers: {
+      "Content-Type": "application/json"
+    },
+
+    body: JSON.stringify({
+      chat_id: TELEGRAM_CHAT_ID,
+      text: message,
+      reply_markup: replyMarkup
+    })
+  });
+
+  const result = await response.json();
+
+  if (!result.ok) {
+    console.error(
+      "Telegram send failed:",
+      result
+    );
+  }
+}
+
+
+// ===============================
+// TELEGRAM CALLBACK RESPONSE
+// ===============================
+async function answerCallback(
+  callbackId,
+  text
+) {
+  if (!TELEGRAM_TOKEN) {
+    return;
+  }
+
+  const url =
+    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/answerCallbackQuery`;
+
+  await fetch(url, {
+    method: "POST",
+
+    headers: {
+      "Content-Type": "application/json"
+    },
+
+    body: JSON.stringify({
+      callback_query_id: callbackId,
+      text: text
+    })
+  });
+}
+
+
+// ===============================
+// EDIT TELEGRAM MESSAGE
+// ===============================
+async function editTelegramMessage(
+  chatId,
+  messageId,
+  text
+) {
+  if (!TELEGRAM_TOKEN) {
+    return;
+  }
+
+  const url =
+    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/editMessageText`;
+
+  await fetch(url, {
+    method: "POST",
+
+    headers: {
+      "Content-Type": "application/json"
+    },
+
+    body: JSON.stringify({
+      chat_id: chatId,
+      message_id: messageId,
+      text: text,
+      reply_markup: {
+        inline_keyboard: []
+      }
+    })
+  });
+}
+
+
+// ===============================
+// TELEGRAM MESSAGE
+// ===============================
+function buildTelegramMessage(
+  request,
+  status
+) {
   return (
 `🧪 DEMO VERIFICATION
 ━━━━━━━━━━━━━━━━━━━━
@@ -258,175 +393,11 @@ ${status}`
 }
 
 
-/* =========================================
-   SEND TELEGRAM MESSAGE WITH BUTTONS
-========================================= */
-
-async function sendTelegramDemoRequest(request) {
-
-  if (!TELEGRAM_TOKEN || !TELEGRAM_CHAT_ID) {
-    throw new Error(
-      "TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is missing"
-    );
-  }
-
-  const url =
-    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
-
-  const response = await fetch(
-    url,
-    {
-      method: "POST",
-
-      headers: {
-        "Content-Type": "application/json"
-      },
-
-      body: JSON.stringify({
-
-        chat_id: TELEGRAM_CHAT_ID,
-
-        text: buildTelegramMessage(
-          request,
-          "⏳ WAITING FOR REVIEW"
-        ),
-
-        reply_markup: {
-
-          inline_keyboard: [
-
-            [
-              {
-                text: "✅ Approve",
-                callback_data:
-                  `demo:approve:${request.id}`
-              }
-            ],
-
-            [
-              {
-                text: "Correct Demo",
-                callback_data:
-                  `demo:approve:${request.id}`
-              },
-
-              {
-                text: "❌ Decline",
-                callback_data:
-                  `demo:decline:${request.id}`
-              }
-            ],
-
-            [
-              {
-                text: "⏱ Extend Time",
-                callback_data:
-                  `demo:extend:${request.id}`
-              }
-            ]
-
-          ]
-
-        }
-
-      })
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(
-      await response.text()
-    );
-  }
-}
-
-
-/* =========================================
-   ANSWER TELEGRAM BUTTON
-========================================= */
-
-async function answerCallback(
-  callbackId,
-  text
-) {
-
-  if (!TELEGRAM_TOKEN) {
-    return;
-  }
-
-  const url =
-    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/answerCallbackQuery`;
-
-  await fetch(
-    url,
-    {
-      method: "POST",
-
-      headers: {
-        "Content-Type": "application/json"
-      },
-
-      body: JSON.stringify({
-        callback_query_id: callbackId,
-        text: text
-      })
-    }
-  );
-}
-
-
-/* =========================================
-   UPDATE TELEGRAM MESSAGE
-========================================= */
-
-async function editTelegramMessage(
-  chatId,
-  messageId,
-  text
-) {
-
-  if (!TELEGRAM_TOKEN) {
-    return;
-  }
-
-  const url =
-    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/editMessageText`;
-
-  await fetch(
-    url,
-    {
-      method: "POST",
-
-      headers: {
-        "Content-Type": "application/json"
-      },
-
-      body: JSON.stringify({
-
-        chat_id: chatId,
-
-        message_id: messageId,
-
-        text: text,
-
-        reply_markup: {
-          inline_keyboard: []
-        }
-
-      })
-    }
-  );
-}
-
-
-/* =========================================
-   SET TELEGRAM WEBHOOK
-========================================= */
-
+// ===============================
+// SET TELEGRAM WEBHOOK
+// ===============================
 async function setupWebhook() {
-
   if (!TELEGRAM_TOKEN || !WEBHOOK_URL) {
-
     console.log(
       "Webhook not configured. " +
       "Set TELEGRAM_BOT_TOKEN and WEBHOOK_URL."
@@ -443,21 +414,17 @@ async function setupWebhook() {
     `https://api.telegram.org/bot${TELEGRAM_TOKEN}/setWebhook`;
 
   try {
+    const response = await fetch(url, {
+      method: "POST",
 
-    const response = await fetch(
-      url,
-      {
-        method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
 
-        headers: {
-          "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-          url: webhook
-        })
-      }
-    );
+      body: JSON.stringify({
+        url: webhook
+      })
+    });
 
     const result =
       await response.json();
@@ -468,7 +435,6 @@ async function setupWebhook() {
     );
 
   } catch (error) {
-
     console.error(
       "Webhook setup failed:",
       error
@@ -477,19 +443,13 @@ async function setupWebhook() {
 }
 
 
-/* =========================================
-   START SERVER
-========================================= */
+// ===============================
+// START SERVER
+// ===============================
+app.listen(PORT, async () => {
+  console.log(
+    `Demo server running on port ${PORT}`
+  );
 
-app.listen(
-  PORT,
-  async () => {
-
-    console.log(
-      `Demo server running on port ${PORT}`
-    );
-
-    await setupWebhook();
-
-  }
-);
+  await setupWebhook();
+});
