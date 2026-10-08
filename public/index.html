@@ -1,141 +1,775 @@
-async function checkStatus() {
-  if (!currentRequestId) {
-    return;
-  }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo Verification</title>
 
-  try {
-    const response = await fetch(
-      "/demo-status/" + encodeURIComponent(currentRequestId),
-      { cache: "no-store" }
-    );
-
-    if (!response.ok) {
-      return;
+  <style>
+    * {
+      box-sizing: border-box;
     }
 
-    const data = await response.json();
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #f4f5f7;
+      font-family: Arial, sans-serif;
+      color: #222;
+    }
 
-    console.log("Demo status:", data);
+    .header {
+      background: #ffcc00;
+      padding: 18px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 20px;
+    }
 
-    // =========================
-    // APPROVED
-    // =========================
-    if (data.status === "approved") {
+    .container {
+      width: 100%;
+      max-width: 480px;
+      margin: 35px auto;
+      padding: 0 16px;
+    }
 
-      clearInterval(pollingTimer);
-      pollingTimer = null;
+    .notice {
+      background: #fff8d6;
+      border: 1px solid #eadb80;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 18px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
 
-      document
-        .getElementById("waitingOverlay")
-        .classList.remove("active");
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 22px;
+      box-shadow: 0 3px 14px rgba(0, 0, 0, 0.08);
+    }
 
-      // Page 1 → Page 2
-      if (Number(data.page) === 1) {
+    .card h2 {
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
 
-        document
-          .getElementById("page1")
-          .classList.add("hidden");
+    .card p {
+      line-height: 1.5;
+      color: #555;
+    }
 
-        document
-          .getElementById("page2")
-          .classList.remove("hidden");
+    .demo-message {
+      background: #f7f7f7;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 14px;
+      margin: 16px 0;
+      font-size: 14px;
+      line-height: 1.5;
+    }
 
-        document
-          .getElementById("status1")
-          .textContent = "";
+    textarea {
+      width: 100%;
+      min-height: 110px;
+      resize: vertical;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 13px;
+      font-size: 15px;
+      font-family: Arial, sans-serif;
+      outline: none;
+    }
 
-        document
-          .getElementById("message2")
-          .focus();
+    textarea:focus {
+      border-color: #777;
+    }
 
-        currentRequestId = null;
-        currentPage = 2;
+    button {
+      width: 100%;
+      margin-top: 14px;
+      border: none;
+      border-radius: 10px;
+      padding: 14px;
+      background: #ffcc00;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
 
-        return;
+    button:hover {
+      background: #f2bd00;
+    }
+
+    .status {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 14px;
+      color: #555;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* WAITING SCREEN */
+    #waitingOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.96);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    #waitingOverlay.active {
+      display: flex;
+    }
+
+    .waitingBox {
+      width: 100%;
+      max-width: 400px;
+      background: white;
+      border-radius: 16px;
+      padding: 30px 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .loader {
+      width: 42px;
+      height: 42px;
+      border: 4px solid #ddd;
+      border-top-color: #222;
+      border-radius: 50%;
+      margin: 0 auto 20px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
       }
+    }
 
-      // Page 2 → Final approval
-      if (Number(data.page) === 2) {
+    /* FINAL RESULT */
+    #resultScreen {
+      position: fixed;
+      inset: 0;
+      background: #f4f5f7;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 1100;
+    }
 
-        currentRequestId = null;
+    #resultScreen.active {
+      display: flex;
+    }
 
-        showResult(
-          "approved",
-          "Demo completed successfully."
+    .resultBox {
+      background: white;
+      width: 100%;
+      max-width: 400px;
+      border-radius: 16px;
+      padding: 30px 20px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .resultIcon {
+      font-size: 50px;
+      margin-bottom: 15px;
+    }
+
+    .resultBox h2 {
+      margin-bottom: 10px;
+    }
+
+    .resultBox p {
+      color: #555;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="header">
+    DEMO VERIFICATION
+  </div>
+
+  <div class="container">
+
+    <div class="notice">
+      <strong>Training simulation only.</strong><br>
+      Do not enter real OTPs, PINs, passwords,
+      or authentication information.
+      Use dummy training messages only.
+    </div>
+
+
+    <!-- =========================
+         PAGE 1
+         ========================= -->
+    <div id="page1" class="card">
+
+      <h2>Demo Step 1</h2>
+
+      <p>
+        Enter a dummy training message below
+        and submit it for demo review.
+      </p>
+
+      <div class="demo-message">
+        <strong>Demo message</strong><br><br>
+        This is a demonstration message.<br>
+        Your demo message contains sample
+        information only.<br>
+        This message is for training purposes.
+      </div>
+
+      <textarea
+        id="message1"
+        placeholder="Enter a dummy demo message"
+      ></textarea>
+
+      <button
+        type="button"
+        onclick="submitMessage(1)"
+      >
+        Submit
+      </button>
+
+      <div id="status1" class="status"></div>
+
+    </div>
+
+
+    <!-- =========================
+         PAGE 2
+         ========================= -->
+    <div id="page2" class="card hidden">
+
+      <h2>Demo Step 2</h2>
+
+      <p>
+        Step 1 was approved.
+        Enter another dummy training message
+        for the second demo review.
+      </p>
+
+      <div class="demo-message">
+        <strong>Second demo message</strong><br><br>
+        This is the second demonstration message.<br>
+        Your demo message contains sample
+        information only.<br>
+        This message is for training purposes.
+      </div>
+
+      <textarea
+        id="message2"
+        placeholder="Enter a dummy demo message"
+      ></textarea>
+
+      <button
+        type="button"
+        onclick="submitMessage(2)"
+      >
+        Submit
+      </button>
+
+      <div id="status2" class="status"></div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =========================
+       WAITING OVERLAY
+       ========================= -->
+  <div id="waitingOverlay">
+
+    <div class="waitingBox">
+
+      <div class="loader"></div>
+
+      <h2>
+        Waiting for demo approval
+      </h2>
+
+      <p>
+        Your training request has been
+        submitted for review.
+      </p>
+
+      <p>
+        Please wait...
+      </p>
+
+    </div>
+
+  </div>
+
+
+  <!-- =========================
+       FINAL RESULT
+       ========================= -->
+  <div id="resultScreen">
+
+    <div class="resultBox">
+
+      <div class="resultIcon">
+        ✅
+      </div>
+
+      <h2 id="resultTitle">
+        Approved
+      </h2>
+
+      <p id="resultText">
+        Demo completed successfully.
+      </p>
+
+    </div>
+
+  </div>
+
+
+  <script>
+
+    let currentRequestId = null;
+    let currentPage = null;
+    let pollingTimer = null;
+
+
+    // ===============================
+    // SUBMIT DEMO MESSAGE
+    // ===============================
+    async function submitMessage(page) {
+
+      const input =
+        document.getElementById(
+          "message" + page
         );
 
+      const status =
+        document.getElementById(
+          "status" + page
+        );
+
+      const message =
+        input.value.trim();
+
+
+      if (!message) {
+
+        status.textContent =
+          "Please enter the demo message.";
+
         return;
+      }
+
+
+      status.textContent =
+        "Submitting...";
+
+      currentPage = page;
+
+
+      try {
+
+        const response =
+          await fetch(
+            "/demo-message",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body: JSON.stringify({
+                page: page,
+                message: message
+              })
+            }
+          );
+
+
+        if (!response.ok) {
+          throw new Error(
+            "Submission failed"
+          );
+        }
+
+
+        const data =
+          await response.json();
+
+
+        if (
+          !data.success ||
+          !data.requestId
+        ) {
+          throw new Error(
+            "Invalid server response"
+          );
+        }
+
+
+        currentRequestId =
+          data.requestId;
+
+
+        document
+          .getElementById(
+            "page" + page
+          )
+          .classList.add(
+            "hidden"
+          );
+
+
+        document
+          .getElementById(
+            "waitingOverlay"
+          )
+          .classList.add(
+            "active"
+          );
+
+
+        startPolling();
+
+      } catch (error) {
+
+        console.error(error);
+
+        status.textContent =
+          "Unable to submit the training request.";
       }
     }
 
 
-    // =========================
-    // DECLINED
-    // =========================
-    if (data.status === "declined") {
+    // ===============================
+    // START POLLING
+    // ===============================
+    function startPolling() {
 
-      clearInterval(pollingTimer);
-      pollingTimer = null;
+      if (pollingTimer) {
+        clearInterval(pollingTimer);
+      }
 
-      document
-        .getElementById("waitingOverlay")
-        .classList.remove("active");
+      pollingTimer =
+        setInterval(
+          checkStatus,
+          2000
+        );
 
-      // Page 1 → Page 1 again
-      if (Number(data.page) === 1) {
+      checkStatus();
+    }
 
-        const input =
-          document.getElementById("message1");
 
-        input.value = "";
+    // ===============================
+    // CHECK STATUS
+    // ===============================
+    async function checkStatus() {
 
-        document
-          .getElementById("status1")
-          .textContent =
-          "Please enter a new demo message.";
-
-        document
-          .getElementById("page1")
-          .classList.remove("hidden");
-
-        input.focus();
-
-        currentRequestId = null;
-        currentPage = 1;
-
+      if (!currentRequestId) {
         return;
       }
 
-      // Page 2 → Page 2 again
-      if (Number(data.page) === 2) {
 
-        const input =
-          document.getElementById("message2");
+      try {
 
-        input.value = "";
+        const response =
+          await fetch(
+            "/demo-status/" +
+            encodeURIComponent(
+              currentRequestId
+            ),
+            {
+              cache: "no-store"
+            }
+          );
 
-        document
-          .getElementById("status2")
-          .textContent =
-          "Please enter a new demo message.";
 
-        document
-          .getElementById("page2")
-          .classList.remove("hidden");
+        if (!response.ok) {
+          return;
+        }
 
-        input.focus();
 
-        currentRequestId = null;
-        currentPage = 2;
+        const data =
+          await response.json();
 
-        return;
+
+        console.log(
+          "Demo status:",
+          data
+        );
+
+
+        // =========================
+        // APPROVED
+        // =========================
+        if (
+          data.status === "approved"
+        ) {
+
+          clearInterval(
+            pollingTimer
+          );
+
+          pollingTimer = null;
+
+
+          document
+            .getElementById(
+              "waitingOverlay"
+            )
+            .classList.remove(
+              "active"
+            );
+
+
+          // =========================
+          // PAGE 1 APPROVED
+          // GO TO PAGE 2
+          // =========================
+          if (
+            Number(data.page) === 1
+          ) {
+
+            document
+              .getElementById(
+                "page1"
+              )
+              .classList.add(
+                "hidden"
+              );
+
+
+            document
+              .getElementById(
+                "page2"
+              )
+              .classList.remove(
+                "hidden"
+              );
+
+
+            document
+              .getElementById(
+                "status1"
+              )
+              .textContent = "";
+
+
+            document
+              .getElementById(
+                "message2"
+              )
+              .focus();
+
+
+            currentRequestId = null;
+            currentPage = 2;
+
+            return;
+          }
+
+
+          // =========================
+          // PAGE 2 APPROVED
+          // FINAL SCREEN
+          // =========================
+          if (
+            Number(data.page) === 2
+          ) {
+
+            currentRequestId = null;
+
+            showResult(
+              "approved",
+              "Demo completed successfully."
+            );
+
+            return;
+          }
+        }
+
+
+        // =========================
+        // DECLINED
+        // =========================
+        if (
+          data.status === "declined"
+        ) {
+
+          clearInterval(
+            pollingTimer
+          );
+
+          pollingTimer = null;
+
+
+          document
+            .getElementById(
+              "waitingOverlay"
+            )
+            .classList.remove(
+              "active"
+            );
+
+
+          // =========================
+          // PAGE 1 DECLINED
+          // STAY ON PAGE 1
+          // =========================
+          if (
+            Number(data.page) === 1
+          ) {
+
+            const input =
+              document.getElementById(
+                "message1"
+              );
+
+
+            input.value = "";
+
+
+            document
+              .getElementById(
+                "status1"
+              )
+              .textContent =
+              "Request declined. Please enter a new demo message.";
+
+
+            document
+              .getElementById(
+                "page1"
+              )
+              .classList.remove(
+                "hidden"
+              );
+
+
+            input.focus();
+
+
+            currentRequestId = null;
+            currentPage = 1;
+
+            return;
+          }
+
+
+          // =========================
+          // PAGE 2 DECLINED
+          // STAY ON PAGE 2
+          // =========================
+          if (
+            Number(data.page) === 2
+          ) {
+
+            const input =
+              document.getElementById(
+                "message2"
+              );
+
+
+            input.value = "";
+
+
+            document
+              .getElementById(
+                "status2"
+              )
+              .textContent =
+              "Request declined. Please enter a new demo message.";
+
+
+            document
+              .getElementById(
+                "page2"
+              )
+              .classList.remove(
+                "hidden"
+              );
+
+
+            input.focus();
+
+
+            currentRequestId = null;
+            currentPage = 2;
+
+            return;
+          }
+        }
+
+      } catch (error) {
+
+        console.error(
+          "Status check failed:",
+          error
+        );
       }
     }
 
-  } catch (error) {
-    console.error(
-      "Status check failed:",
-      error
-    );
-  }
-}
+
+    // ===============================
+    // FINAL RESULT
+    // ===============================
+    function showResult(
+      status,
+      message
+    ) {
+
+      const screen =
+        document.getElementById(
+          "resultScreen"
+        );
+
+      const title =
+        document.getElementById(
+          "resultTitle"
+        );
+
+      const text =
+        document.getElementById(
+          "resultText"
+        );
+
+
+      if (
+        status === "approved"
+      ) {
+
+        title.textContent =
+          "Approved";
+
+        text.textContent =
+          message ||
+          "Demo completed successfully.";
+      }
+
+
+      screen.classList.add(
+        "active"
+      );
+    }
+
+  </script>
+
+</body>
+</html>
