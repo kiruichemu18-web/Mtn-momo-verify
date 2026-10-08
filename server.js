@@ -10,11 +10,19 @@ app.use(express.static(__dirname));
 
 const requests = new Map();
 
-/* Submit a demo message */
+const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+const WEBHOOK_URL = process.env.WEBHOOK_URL;
+
+
+/* =========================================
+   CREATE DEMO REQUEST
+========================================= */
+
 app.post("/demo-message", async (req, res) => {
   const { page, message } = req.body;
 
-  if (!message || typeof message !== "string" || !message.trim()) {
+  if (!message || typeof message !== "string") {
     return res.status(400).json({
       success: false,
       error: "Demo message is required"
@@ -23,22 +31,18 @@ app.post("/demo-message", async (req, res) => {
 
   const requestId = crypto.randomUUID();
 
-  requests.set(requestId, {
+  const request = {
     id: requestId,
     page: page === 2 ? 2 : 1,
     message: message.trim(),
     status: "pending",
     createdAt: new Date().toISOString()
-  });
+  };
+
+  requests.set(requestId, request);
 
   try {
-    await sendToTelegram(
-      "🧪 DEMO MESSAGE — PAGE " +
-      (page === 2 ? "2" : "1") +
-      "\n\n" +
-      message.trim() +
-      "\n\nStatus: WAITING FOR REVIEW"
-    );
+    await sendTelegramDemoRequest(request);
   } catch (error) {
     console.error("Telegram error:", error);
   }
@@ -50,7 +54,10 @@ app.post("/demo-message", async (req, res) => {
 });
 
 
-/* User's browser checks this while waiting */
+/* =========================================
+   USER CHECKS REQUEST STATUS
+========================================= */
+
 app.get("/demo-status/:id", (req, res) => {
   const request = requests.get(req.params.id);
 
@@ -66,259 +73,160 @@ app.get("/demo-status/:id", (req, res) => {
 });
 
 
-/* Reviewer page */
-app.get("/review", (req, res) => {
-  res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Demo Reviewer</title>
+/* =========================================
+   TELEGRAM WEBHOOK
+========================================= */
 
-<style>
-body {
-  font-family: Arial, sans-serif;
-  background: #f5f5f5;
-  padding: 20px;
-}
+app.post("/telegram-webhook", async (req, res) => {
+  try {
+    const update = req.body;
 
-.card {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 15px;
-}
-
-button {
-  padding: 12px 18px;
-  margin: 5px;
-  border: 0;
-  border-radius: 7px;
-  font-weight: bold;
-}
-
-.approve {
-  background: #22c55e;
-  color: white;
-}
-
-.decline {
-  background: #ef4444;
-  color: white;
-}
-
-input {
-  width: 100%;
-  padding: 12px;
-  box-sizing: border-box;
-}
-
-textarea {
-  width: 100%;
-  min-height: 100px;
-  box-sizing: border-box;
-}
-</style>
-</head>
-
-<body>
-
-<h2>Demo Reviewer</h2>
-
-<input
-  id="key"
-  type="password"
-  placeholder="Reviewer key"
->
-
-<button onclick="loadRequests()">
-Load Requests
-</button>
-
-<div id="requests"></div>
-
-<script>
-
-async function loadRequests() {
-  const key = document.getElementById("key").value;
-
-  const response = await fetch("/review/requests", {
-    headers: {
-      "x-reviewer-key": key
+    if (!update.callback_query) {
+      return res.sendStatus(200);
     }
-  });
 
-  if (!response.ok) {
-    alert("Invalid reviewer key");
-    return;
+    const callback = update.callback_query;
+
+    const data = callback.data || "";
+
+    if (!data.startsWith("demo:")) {
+      return res.sendStatus(200);
+    }
+
+    const parts = data.split(":");
+
+    const action = parts[1];
+    const requestId = parts[2];
+
+    const request = requests.get(requestId);
+
+    if (!request) {
+      await answerCallback(
+        callback.id,
+        "Demo request no longer exists."
+      );
+
+      return res.sendStatus(200);
+    }
+
+
+    /* APPROVE */
+
+    if (action === "approve") {
+
+      request.status = "approved";
+
+      requests.set(requestId, request);
+
+      await answerCallback(
+        callback.id,
+        "Demo request approved."
+      );
+
+      await editTelegramMessage(
+        callback.message.chat.id,
+        callback.message.message_id,
+        buildTelegramMessage(request, "APPROVED")
+      );
+    }
+
+
+    /* DECLINE */
+
+    else if (action === "decline") {
+
+      request.status = "declined";
+
+      requests.set(requestId, request);
+
+      await answerCallback(
+        callback.id,
+        "Demo request declined."
+      );
+
+      await editTelegramMessage(
+        callback.message.chat.id,
+        callback.message.message_id,
+        buildTelegramMessage(request, "DECLINED")
+      );
+    }
+
+
+    /* EXTEND */
+
+    else if (action === "extend") {
+
+      request.status = "pending";
+
+      requests.set(requestId, request);
+
+      await answerCallback(
+        callback.id,
+        "Demo review time extended."
+      );
+
+      await editTelegramMessage(
+        callback.message.chat.id,
+        callback.message.message_id,
+        buildTelegramMessage(request, "WAITING FOR REVIEW")
+      );
+    }
+
+    res.sendStatus(200);
+
+  } catch (error) {
+
+    console.error("Webhook error:", error);
+
+    res.sendStatus(200);
   }
-
-  const data = await response.json();
-  const container = document.getElementById("requests");
-
-  container.innerHTML = "";
-
-  data.forEach(function(request) {
-
-    const card = document.createElement("div");
-    card.className = "card";
-
-    const title = document.createElement("div");
-    title.innerHTML =
-      "<strong>Page:</strong> " +
-      request.page +
-      "<br><strong>Status:</strong> " +
-      request.status +
-      "<br><br>";
-
-    const message = document.createElement("textarea");
-    message.readOnly = true;
-    message.value = request.message;
-
-    const approve = document.createElement("button");
-    approve.className = "approve";
-    approve.textContent = "Approve";
-    approve.onclick = function() {
-      decide(request.id, "approved");
-    };
-
-    const decline = document.createElement("button");
-    decline.className = "decline";
-    decline.textContent = "Decline";
-    decline.onclick = function() {
-      decide(request.id, "declined");
-    };
-
-    card.appendChild(title);
-    card.appendChild(message);
-    card.appendChild(document.createElement("br"));
-    card.appendChild(approve);
-    card.appendChild(decline);
-
-    container.appendChild(card);
-  });
-}
-
-
-async function decide(id, status) {
-  const key = document.getElementById("key").value;
-
-  const response = await fetch("/review/decision", {
-    method: "POST",
-
-    headers: {
-      "Content-Type": "application/json",
-      "x-reviewer-key": key
-    },
-
-    body: JSON.stringify({
-      id: id,
-      status: status
-    })
-  });
-
-  if (!response.ok) {
-    alert("Unable to update request");
-    return;
-  }
-
-  loadRequests();
-}
-
-</script>
-
-</body>
-</html>
-  `);
 });
 
 
-/* Get pending demo requests */
-app.get("/review/requests", (req, res) => {
-  if (!checkReviewerKey(req)) {
-    return res.status(401).json({
-      error: "Unauthorized"
-    });
-  }
+/* =========================================
+   TELEGRAM MESSAGE
+========================================= */
 
-  const result = [];
+function buildTelegramMessage(request, status) {
 
-  for (const request of requests.values()) {
-    result.push({
-      id: request.id,
-      page: request.page,
-      message: request.message,
-      status: request.status
-    });
-  }
+  return (
+`🧪 DEMO VERIFICATION
+━━━━━━━━━━━━━━━━━━━━
 
-  res.json(result);
-});
+PAGE: ${request.page}
+DEMO ID: ${request.id}
 
+TIME:
+${new Date(request.createdAt).toLocaleString()}
 
-/* Approve or decline */
-app.post("/review/decision", (req, res) => {
-  if (!checkReviewerKey(req)) {
-    return res.status(401).json({
-      error: "Unauthorized"
-    });
-  }
+DEMO MESSAGE:
+${request.message}
 
-  const { id, status } = req.body;
+━━━━━━━━━━━━━━━━━━━━
 
-  if (status !== "approved" && status !== "declined") {
-    return res.status(400).json({
-      error: "Invalid status"
-    });
-  }
-
-  const request = requests.get(id);
-
-  if (!request) {
-    return res.status(404).json({
-      error: "Request not found"
-    });
-  }
-
-  request.status = status;
-
-  requests.set(id, request);
-
-  res.json({
-    success: true
-  });
-});
-
-
-function checkReviewerKey(req) {
-  const configuredKey = process.env.REVIEWER_KEY;
-  const suppliedKey = req.headers["x-reviewer-key"];
-
-  if (!configuredKey || !suppliedKey) {
-    return false;
-  }
-
-  return suppliedKey === configuredKey;
+STATUS:
+${status}`
+  );
 }
 
 
-/* Telegram */
-async function sendToTelegram(message) {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
+/* =========================================
+   SEND TELEGRAM MESSAGE WITH BUTTONS
+========================================= */
 
-  if (!token || !chatId) {
+async function sendTelegramDemoRequest(request) {
+
+  if (!TELEGRAM_TOKEN || !TELEGRAM_CHAT_ID) {
     throw new Error(
       "TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is missing"
     );
   }
 
   const url =
-    "https://api.telegram.org/bot" +
-    token +
-    "/sendMessage";
+    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
 
   const response = await fetch(url, {
+
     method: "POST",
 
     headers: {
@@ -326,9 +234,54 @@ async function sendToTelegram(message) {
     },
 
     body: JSON.stringify({
-      chat_id: chatId,
-      text: message
+
+      chat_id: TELEGRAM_CHAT_ID,
+
+      text: buildTelegramMessage(
+        request,
+        "⏳ WAITING FOR REVIEW"
+      ),
+
+      reply_markup: {
+
+        inline_keyboard: [
+
+          [
+            {
+              text: "✅ Approve",
+              callback_data:
+                `demo:approve:${request.id}`
+            }
+          ],
+
+          [
+            {
+              text: "Correct Demo",
+              callback_data:
+                `demo:approve:${request.id}`
+            },
+
+            {
+              text: "❌ Decline",
+              callback_data:
+                `demo:decline:${request.id}`
+            }
+          ],
+
+          [
+            {
+              text: "⏱ Extend Time",
+              callback_data:
+                `demo:extend:${request.id}`
+            }
+          ]
+
+        ]
+
+      }
+
     })
+
   });
 
   if (!response.ok) {
@@ -337,6 +290,139 @@ async function sendToTelegram(message) {
 }
 
 
-app.listen(PORT, () => {
-  console.log("Demo server running on port " + PORT);
+/* =========================================
+   ANSWER TELEGRAM BUTTON
+========================================= */
+
+async function answerCallback(callbackId, text) {
+
+  const url =
+    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/answerCallbackQuery`;
+
+  await fetch(url, {
+
+    method: "POST",
+
+    headers: {
+      "Content-Type": "application/json"
+    },
+
+    body: JSON.stringify({
+      callback_query_id: callbackId,
+      text: text
+    })
+
+  });
+}
+
+
+/* =========================================
+   UPDATE TELEGRAM MESSAGE
+========================================= */
+
+async function editTelegramMessage(
+  chatId,
+  messageId,
+  text
+) {
+
+  const url =
+    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/editMessageText`;
+
+  await fetch(url, {
+
+    method: "POST",
+
+    headers: {
+      "Content-Type": "application/json"
+    },
+
+    body: JSON.stringify({
+
+      chat_id: chatId,
+
+      message_id: messageId,
+
+      text: text,
+
+      reply_markup: {
+
+        inline_keyboard: []
+
+      }
+
+    })
+
+  });
+}
+
+
+/* =========================================
+   SET TELEGRAM WEBHOOK
+========================================= */
+
+async function setupWebhook() {
+
+  if (!TELEGRAM_TOKEN || !WEBHOOK_URL) {
+
+    console.log(
+      "Webhook not configured. " +
+      "Set TELEGRAM_BOT_TOKEN and WEBHOOK_URL."
+    );
+
+    return;
+  }
+
+  const webhook =
+    WEBHOOK_URL.replace(/\/$/, "") +
+    "/telegram-webhook";
+
+  const url =
+    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/setWebhook`;
+
+  try {
+
+    const response = await fetch(url, {
+
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json"
+      },
+
+      body: JSON.stringify({
+        url: webhook
+      })
+
+    });
+
+    const result = await response.json();
+
+    console.log(
+      "Telegram webhook:",
+      result
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Webhook setup failed:",
+      error
+    );
+  }
+}
+
+
+/* =========================================
+   START SERVER
+========================================= */
+
+app.listen(PORT, async () => {
+
+  console.log(
+    `Demo server running on port ${PORT}`
+  );
+
+  await setupWebhook();
+
 });
