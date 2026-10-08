@@ -90,6 +90,7 @@
     }
 
     /* WAITING OVERLAY */
+
     #waitingOverlay {
       position: fixed;
       inset: 0;
@@ -137,6 +138,8 @@
       font-size: 18px;
       line-height: 1.5;
     }
+
+    /* RESULT SCREEN */
 
     .result {
       position: fixed;
@@ -186,6 +189,7 @@
 
 
     <!-- PAGE 1 -->
+
     <div class="card" id="page1">
 
       <p>Copy the message from SMS in your messages box.</p>
@@ -211,6 +215,7 @@ This message is for training purposes.
 
 
     <!-- PAGE 2 -->
+
     <div class="card hidden" id="page2">
 
       <p>Copy the message from SMS in your messages box.</p>
@@ -238,6 +243,7 @@ This message is for training purposes.
 
 
   <!-- WAITING SCREEN -->
+
   <div id="waitingOverlay">
 
     <div class="waitingBox">
@@ -259,6 +265,7 @@ This message is for training purposes.
 
 
   <!-- RESULT SCREEN -->
+
   <div id="resultScreen" class="result">
 
     <div class="resultBox">
@@ -340,8 +347,8 @@ async function submitMessage(page) {
 
 
     /*
-      Hide the current page and
-      show the waiting screen.
+      Hide the current page
+      and show waiting screen.
     */
 
     document
@@ -351,7 +358,6 @@ async function submitMessage(page) {
     document
       .getElementById("waitingOverlay")
       .classList.add("active");
-
 
     startPolling();
 
@@ -405,6 +411,8 @@ async function checkStatus() {
 
     const data = await response.json();
 
+    console.log("Demo status:", data);
+
 
     /* =========================
        APPROVED
@@ -423,10 +431,10 @@ async function checkStatus() {
 
       /*
         PAGE 1 APPROVED:
-        Move to PAGE 2.
+        MOVE TO PAGE 2.
       */
 
-      if (currentPage === 1) {
+      if (data.page === 1) {
 
         document
           .getElementById("page1")
@@ -452,10 +460,10 @@ async function checkStatus() {
 
       /*
         PAGE 2 APPROVED:
-        Finish the demo.
+        FINISH THE DEMO.
       */
 
-      if (currentPage === 2) {
+      if (data.page === 2) {
 
         showResult(
           "approved",
@@ -485,12 +493,11 @@ async function checkStatus() {
 
 
       /*
-        DECLINE ON PAGE 1:
-        Return to Page 1 and clear
-        the old dummy message.
+        PAGE 1 DECLINED:
+        RETURN TO PAGE 1.
       */
 
-      if (currentPage === 1) {
+      if (data.page === 1) {
 
         const input =
           document.getElementById("message1");
@@ -515,76 +522,10 @@ async function checkStatus() {
 
 
       /*
-        DECLINE ON PAGE 2:
-        Return to Page 2 and clear
-        the old dummy message.
+        PAGE 2 DECLINED:
+        RETURN TO PAGE 2.
       */
 
-      if (currentPage === 2) {
+      if (data.page === 2) {
 
-        const input =
-          document.getElementById("message2");
-
-        input.value = "";
-
-        document
-          .getElementById("status2")
-          .textContent =
-          "Please enter a new demo message.";
-
-        document
-          .getElementById("page2")
-          .classList.remove("hidden");
-
-        input.focus();
-
-        currentRequestId = null;
-
-        return;
-      }
-    }
-
-  } catch (error) {
-
-    console.error(
-      "Status check failed:",
-      error
-    );
-  }
-}
-
-
-/* =========================
-   RESULT SCREEN
-========================= */
-
-function showResult(status, message) {
-
-  const screen =
-    document.getElementById("resultScreen");
-
-  const title =
-    document.getElementById("resultTitle");
-
-  const text =
-    document.getElementById("resultText");
-
-
-  if (status === "approved") {
-
-    title.textContent = "Approved";
-
-    text.textContent =
-      message ||
-      "Your training request has been approved.";
-
-  }
-
-
-  screen.classList.add("active");
-}
-
-</script>
-
-</body>
-</html>
+        const
